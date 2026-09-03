@@ -34,10 +34,7 @@ final class NotchWindowController {
     }
 
     private static func activeDisplayMetrics() -> NotchMetrics {
-        let screen =
-            NSScreen.screens.first { $0.auxiliaryTopLeftArea != nil }
-            ?? NSScreen.main
-            ?? NSScreen.screens.first
+        let screen = NSScreen.main ?? NSScreen.screens.first
 
         guard let screen else {
             return NotchMetrics(screenFrame: .zero, notchRect: .zero, hasPhysicalNotch: false)

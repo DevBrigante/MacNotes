@@ -21,9 +21,8 @@ struct NotchPanelView: View {
         return HStack(spacing: 0) {
             flank(rounding: .bottomLeading)
                 .frame(width: gap.minX)
-            Color.clear
+            notch
                 .frame(width: gap.width)
-                .allowsHitTesting(false)
             flank(rounding: .bottomTrailing)
         }
         .frame(height: gap.height)
@@ -34,8 +33,22 @@ struct NotchPanelView: View {
             bottomLeadingRadius: corner == .bottomLeading ? cornerRadius : 0,
             bottomTrailingRadius: corner == .bottomTrailing ? cornerRadius : 0
         )
-        .fill(model.state == .collapsed ? Color.black : Color.clear)
+        .fill(flankFill)
         .frame(maxWidth: .infinity)
+    }
+
+    private var notch: some View {
+        Rectangle()
+            .fill(notchFill)
+            .allowsHitTesting(metrics.drawsItsOwnNotch)
+    }
+
+    private var flankFill: Color {
+        model.state == .collapsed ? .black : .clear
+    }
+
+    private var notchFill: Color {
+        metrics.drawsItsOwnNotch && model.state != .hidden ? .black : .clear
     }
 
     private var readout: some View {

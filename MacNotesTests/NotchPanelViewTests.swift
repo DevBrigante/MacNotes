@@ -7,16 +7,22 @@ import Testing
 
 @MainActor
 struct NotchPanelViewTests {
-    private let metrics = NotchMetrics(
+    private let physical = NotchMetrics(
         screenFrame: CGRect(x: 0, y: 0, width: 1512, height: 982),
         notchRect: CGRect(x: 656, y: 945, width: 200, height: 37),
         hasPhysicalNotch: true
     )
 
+    private let simulated = NotchMetrics(
+        screenFrame: CGRect(x: 0, y: 0, width: 2560, height: 1440),
+        notchRect: CGRect(x: 1180, y: 1416, width: 200, height: 24),
+        hasPhysicalNotch: false
+    )
+
     @Test func nothingIsDrawnOverTheCamera() throws {
         let model = collapsed()
-        let pixels = try render(model)
-        let gap = metrics.notchGap(for: model.state)
+        let pixels = try render(model, on: physical)
+        let gap = physical.notchGap(for: model.state)
 
         #expect(pixels.alpha(atX: gap.midX, y: gap.midY) == 0)
         #expect(pixels.alpha(atX: gap.minX + 1, y: gap.midY) == 0)
@@ -25,15 +31,15 @@ struct NotchPanelViewTests {
 
     @Test func bothFlanksAreDrawnOn() throws {
         let model = collapsed()
-        let pixels = try render(model)
-        let gap = metrics.notchGap(for: model.state)
+        let pixels = try render(model, on: physical)
+        let gap = physical.notchGap(for: model.state)
 
         #expect(pixels.alpha(atX: gap.minX / 2, y: gap.midY) == 255)
         #expect(pixels.alpha(atX: (gap.maxX + CGFloat(pixels.width)) / 2, y: gap.midY) == 255)
     }
 
     @Test func hiddenDrawsNothingAtAll() throws {
-        let pixels = try render(NotchPanelModel())
+        let pixels = try render(NotchPanelModel(), on: physical)
 
         for x in stride(from: 2.0, to: Double(pixels.width) - 2, by: 8) {
             #expect(pixels.alpha(atX: x, y: 8) == 0)
@@ -41,13 +47,42 @@ struct NotchPanelViewTests {
     }
 
     @Test func expandedLeavesTheWholeMenuBarStripAlone() throws {
-        let model = NotchPanelModel()
-        model.cursorMoved(isOver: true)
-        let pixels = try render(model)
-        let strip = metrics.notchGap(for: model.state)
+        let model = expanded()
+        let pixels = try render(model, on: physical)
+        let strip = physical.notchGap(for: model.state)
 
         for x in stride(from: 1.0, to: Double(pixels.width) - 1, by: 4) {
             #expect(pixels.alpha(atX: x, y: strip.midY) == 0)
+        }
+    }
+
+    @Test func collapsedDrawsTheSimulatedNotchAsOneStripWithItsFlanks() throws {
+        let model = collapsed()
+        let pixels = try render(model, on: simulated)
+        let gap = simulated.notchGap(for: model.state)
+
+        #expect(pixels.alpha(atX: gap.midX, y: gap.midY) == 255)
+        #expect(pixels.alpha(atX: gap.minX + 1, y: gap.midY) == 255)
+        #expect(pixels.alpha(atX: gap.maxX - 1, y: gap.midY) == 255)
+    }
+
+    @Test func expandedKeepsTheSimulatedNotchAndNothingElseInTheStrip() throws {
+        let model = expanded()
+        let pixels = try render(model, on: simulated)
+        let strip = simulated.notchGap(for: model.state)
+
+        #expect(pixels.alpha(atX: strip.midX, y: strip.midY) == 255)
+        #expect(pixels.alpha(atX: strip.minX / 2, y: strip.midY) == 0)
+        #expect(pixels.alpha(atX: (strip.maxX + CGFloat(pixels.width)) / 2, y: strip.midY) == 0)
+    }
+
+    @Test func hiddenLeavesADisplayWithoutANotchUntouched() throws {
+        let pixels = try render(NotchPanelModel(), on: simulated)
+
+        for x in stride(from: 1.0, to: Double(pixels.width) - 1, by: 4) {
+            for y in stride(from: 1.0, to: Double(pixels.height) - 1, by: 4) {
+                #expect(pixels.alpha(atX: x, y: y) == 0)
+            }
         }
     }
 
@@ -55,7 +90,13 @@ struct NotchPanelViewTests {
         NotchPanelModel(state: .collapsed)
     }
 
-    private func render(_ model: NotchPanelModel) throws -> Pixels {
+    private func expanded() -> NotchPanelModel {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+        return model
+    }
+
+    private func render(_ model: NotchPanelModel, on metrics: NotchMetrics) throws -> Pixels {
         let frame = metrics.panelFrame(for: model.state)
         let renderer = ImageRenderer(
             content: NotchPanelView(metrics: metrics, model: model)
@@ -67,7 +108,7 @@ struct NotchPanelViewTests {
 
     private struct Pixels {
         let width: Int
-        private let height: Int
+        let height: Int
         private let bytes: [UInt8]
 
         init(_ image: CGImage) throws {
