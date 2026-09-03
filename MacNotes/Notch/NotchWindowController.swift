@@ -10,11 +10,13 @@ final class NotchWindowController {
     private let tracking = NotchTrackingView()
     private let hosting: NSHostingView<NotchPanelView>
 
+    private var activeDisplay = ActiveDisplay()
     private var metrics: NotchMetrics
     private var observers: [NSObjectProtocol] = []
+    private var sampler: Timer?
 
     init() {
-        metrics = Self.activeDisplayMetrics()
+        metrics = Self.metrics(of: activeDisplay.screen)
         hosting = NSHostingView(rootView: NotchPanelView(metrics: metrics, model: model))
 
         hosting.sizingOptions = []
@@ -29,13 +31,16 @@ final class NotchWindowController {
         panel.contentView = tracking
 
         watchTheCursor()
+        followTheCursorAcrossDisplays()
         watchTheDisplays()
         place(animated: false)
     }
 
-    private static func activeDisplayMetrics() -> NotchMetrics {
-        let screen = NSScreen.main ?? NSScreen.screens.first
+    deinit {
+        sampler?.invalidate()
+    }
 
+    private static func metrics(of screen: NSScreen?) -> NotchMetrics {
         guard let screen else {
             return NotchMetrics(screenFrame: .zero, notchRect: .zero, hasPhysicalNotch: false)
         }
@@ -59,7 +64,10 @@ final class NotchWindowController {
     }
 
     private func remeasureAndRaise() {
-        metrics = Self.activeDisplayMetrics()
+        if activeDisplay.screen == nil {
+            activeDisplay = ActiveDisplay()
+        }
+        metrics = Self.metrics(of: activeDisplay.screen)
         hosting.rootView = NotchPanelView(metrics: metrics, model: model)
         place(animated: false)
     }
@@ -72,6 +80,23 @@ final class NotchWindowController {
             guard model.state != previous else { return }
             place(animated: true)
         }
+    }
+
+    private func followTheCursorAcrossDisplays() {
+        let sampler = Timer(timeInterval: ActiveDisplay.sampling, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.sampleTheCursorsDisplay() }
+        }
+        sampler.tolerance = ActiveDisplay.sampling / 2
+        RunLoop.main.add(sampler, forMode: .common)
+        self.sampler = sampler
+    }
+
+    private func sampleTheCursorsDisplay() {
+        guard let display = NSScreen.underTheCursor?.displayID else { return }
+        let previous = activeDisplay.display
+        activeDisplay.cursorMoved(to: display, at: ActiveDisplay.now)
+        guard activeDisplay.display != previous else { return }
+        remeasureAndRaise()
     }
 
     var intendedFrame: NSRect {
