@@ -41,7 +41,7 @@ The app's surface, drawn in the strip of screen around the camera notch, above t
 _Avoid_: Widget, HUD, overlay, island
 
 **Active Display**:
-The display the Notch Panel currently occupies: the one the user is working on. The Panel follows it across displays.
+The display the Notch Panel currently occupies: the one the cursor is on. The Panel follows the cursor across displays, taking a new one only once the cursor has rested there for about a second — so crossing a display on the way to a third never drags the Panel through it.
 _Avoid_: Main screen, primary monitor, current screen
 
 **Simulated Notch**:

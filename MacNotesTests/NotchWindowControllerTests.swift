@@ -17,9 +17,9 @@ struct NotchWindowControllerTests {
         #expect(controller.panel.level.rawValue > Int(CGWindowLevelForKey(.mainMenuWindow)))
     }
 
-    @Test func theWindowLandsOnTheActiveDisplay() throws {
+    @Test func theWindowLandsOnTheDisplayUnderTheCursor() throws {
         let controller = NotchWindowController()
-        let screen = try #require(NSScreen.main)
+        let screen = try #require(NSScreen.underTheCursor ?? NSScreen.main)
 
         #expect(screen.frame.intersects(controller.panel.frame))
         #expect(controller.panel.frame.maxY == screen.frame.maxY)
