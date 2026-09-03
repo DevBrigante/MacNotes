@@ -2,15 +2,10 @@ import AppKit
 import QuartzCore
 import SwiftUI
 
-/// Owns the Notch Panel: puts it in the notch strip, keeps it there across Space
-/// switches and display sleep, and drives its state from the cursor.
-///
-/// It lives as long as the app does, so the observers it installs are never
-/// torn down.
 @MainActor
 final class NotchWindowController {
-
     let panel = NotchPanel()
+
     private let model = NotchPanelModel()
     private let tracking = NotchTrackingView()
     private let hosting: NSHostingView<NotchPanelView>
@@ -22,8 +17,6 @@ final class NotchWindowController {
         metrics = Self.activeDisplayMetrics()
         hosting = NSHostingView(rootView: NotchPanelView(metrics: metrics, model: model))
 
-        // The metrics decide how big the Panel is, not the content: SwiftUI's
-        // own idea of a good size must not reach the window.
         hosting.sizingOptions = []
         hosting.translatesAutoresizingMaskIntoConstraints = false
         tracking.addSubview(hosting)
@@ -40,10 +33,6 @@ final class NotchWindowController {
         place(animated: false)
     }
 
-    // MARK: The display
-
-    /// Measures the Active Display. Following the cursor from one display to the
-    /// next is its own issue; until then, prefer whichever screen has a notch.
     private static func activeDisplayMetrics() -> NotchMetrics {
         let screen =
             NSScreen.screens.first { $0.auxiliaryTopLeftArea != nil }
@@ -51,7 +40,6 @@ final class NotchWindowController {
             ?? NSScreen.screens.first
 
         guard let screen else {
-            // No display attached. Park the Panel until one arrives.
             return NotchMetrics(screenFrame: .zero, notchRect: .zero, hasPhysicalNotch: false)
         }
         return NotchMetrics(screen: screen)
@@ -73,16 +61,11 @@ final class NotchWindowController {
         observers.append(observer)
     }
 
-    /// Screens, Spaces or sleep moved the ground under us: measure the display
-    /// again and put the Panel back on top. Waking a display in particular can
-    /// leave the panel sitting behind the menu bar.
     private func remeasureAndRaise() {
         metrics = Self.activeDisplayMetrics()
         hosting.rootView = NotchPanelView(metrics: metrics, model: model)
         place(animated: false)
     }
-
-    // MARK: The cursor
 
     private func watchTheCursor() {
         tracking.cursorIsOver = { [weak self] isOver in
@@ -94,10 +77,6 @@ final class NotchWindowController {
         }
     }
 
-    // MARK: Placing the panel
-
-    /// Where the Panel belongs right now. `place(animated:)` is the only thing
-    /// that puts it there — anything else moving the window is a bug.
     var intendedFrame: NSRect {
         metrics.panelFrame(for: model.state)
     }

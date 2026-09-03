@@ -5,11 +5,8 @@ import Testing
 
 @testable import MacNotes
 
-/// Renders the Notch Panel and reads the pixels back. The placement tests prove
-/// the window lands on the notch; this proves the drawing stays off it.
 @MainActor
 struct NotchPanelViewTests {
-
     private let metrics = NotchMetrics(
         screenFrame: CGRect(x: 0, y: 0, width: 1512, height: 982),
         notchRect: CGRect(x: 656, y: 945, width: 200, height: 37),
@@ -49,17 +46,11 @@ struct NotchPanelViewTests {
         let pixels = try render(model)
         let strip = metrics.notchGap(for: model.state)
 
-        // Expanded hangs below the menu bar instead of reaching across it, so
-        // the whole strip — camera and menu bar alike — stays untouched.
         for x in stride(from: 1.0, to: Double(pixels.width) - 1, by: 4) {
             #expect(pixels.alpha(atX: x, y: strip.midY) == 0)
         }
     }
 
-    // MARK: Rendering
-
-    /// Collapsed is out of the cursor's reach until a Focus Session can put the
-    /// Panel there, but the Panel still has to draw it correctly.
     private func collapsed() -> NotchPanelModel {
         NotchPanelModel(state: .collapsed)
     }
@@ -74,7 +65,6 @@ struct NotchPanelViewTests {
         return try Pixels(try #require(renderer.cgImage))
     }
 
-    /// The rendered panel, addressable one pixel at a time.
     private struct Pixels {
         let width: Int
         private let height: Int
@@ -100,7 +90,6 @@ struct NotchPanelViewTests {
             bytes = buffer
         }
 
-        /// Alpha at a point in the panel's own space, origin top-left.
         func alpha(atX x: CGFloat, y: CGFloat) -> UInt8 {
             let column = min(max(Int(x), 0), width - 1)
             let row = min(max(Int(y), 0), height - 1)
