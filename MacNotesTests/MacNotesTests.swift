@@ -1,10 +1,3 @@
-//
-//  MacNotesTests.swift
-//  MacNotesTests
-//
-//  Created by Brenno Reis on 02/09/26.
-//
-
 import Testing
 @testable import MacNotes
 

@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  MacNotes
-//
-//  Created by Brenno Reis on 02/09/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {

@@ -1,10 +1,3 @@
-//
-//  MacNotesUITests.swift
-//  MacNotesUITests
-//
-//  Created by Brenno Reis on 02/09/26.
-//
-
 import XCTest
 
 final class MacNotesUITests: XCTestCase {
