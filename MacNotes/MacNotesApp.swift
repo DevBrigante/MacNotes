@@ -1,10 +1,3 @@
-//
-//  MacNotesApp.swift
-//  MacNotes
-//
-//  Created by Brenno Reis on 02/09/26.
-//
-
 import SwiftUI
 
 @main
