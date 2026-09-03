@@ -48,12 +48,16 @@ _Avoid_: Main screen, primary monitor, current screen
 The notch shape the Notch Panel draws for itself on a display that has no physical one, so that external monitors behave like the built-in screen. It occupies a strip and nothing else — content hangs below it, never covering what the user is looking at.
 _Avoid_: Fake notch, virtual notch, pill
 
+**Notch Marker**:
+The dot drawn at the centre of a Simulated Notch while the Notch Panel is Hidden, and nowhere else. A physical notch tells the user where to aim by being a shape they can see; a display without one tells them nothing, and the Marker is what stands in for it. It goes the moment the Panel opens.
+_Avoid_: Dot, indicator, badge, hint
+
 **Progress Tray**:
 The line tracing the Notch Panel's outline, growing from empty to full as a Focus Session runs. Drawn in the system accent colour, like the Activity Graph.
 _Avoid_: Progress bar, timeline, ring
 
 **Hidden**:
-The Notch Panel's state when no Focus Session is running and the cursor is away, and whenever the Planner is open — drawn entirely within the notch's silhouette, physical or Simulated, so the display looks untouched.
+The Notch Panel's state when no Focus Session is running and the cursor is away, and whenever the Planner is open — drawn entirely within the notch's silhouette, physical or Simulated. Inside a physical notch that means nothing at all is drawn, and the display looks untouched; inside a Simulated one it means the Notch Marker and nothing else.
 
 **Collapsed**:
 The Notch Panel's state with a Focus Session running and the cursor away — the strip flanking the notch, showing the Session's remaining time and its Task.

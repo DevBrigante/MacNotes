@@ -5,6 +5,7 @@ struct NotchPanelView: View {
     let model: NotchPanelModel
 
     private let cornerRadius: CGFloat = 10
+    private let markerDiameter: CGFloat = 6
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,7 +41,17 @@ struct NotchPanelView: View {
     private var notch: some View {
         Rectangle()
             .fill(notchFill)
+            .overlay { marker }
             .allowsHitTesting(metrics.drawsItsOwnNotch)
+    }
+
+    @ViewBuilder
+    private var marker: some View {
+        if metrics.drawsItsOwnNotch && model.state == .hidden {
+            Circle()
+                .fill(.red)
+                .frame(width: markerDiameter, height: markerDiameter)
+        }
     }
 
     private var flankFill: Color {

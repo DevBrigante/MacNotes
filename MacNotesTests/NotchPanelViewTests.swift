@@ -38,11 +38,13 @@ struct NotchPanelViewTests {
         #expect(pixels.alpha(atX: (gap.maxX + CGFloat(pixels.width)) / 2, y: gap.midY) == 255)
     }
 
-    @Test func hiddenDrawsNothingAtAll() throws {
+    @Test func hiddenDrawsNothingAtAllWhereTheNotchIsPhysical() throws {
         let pixels = try render(NotchPanelModel(), on: physical)
 
-        for x in stride(from: 2.0, to: Double(pixels.width) - 2, by: 8) {
-            #expect(pixels.alpha(atX: x, y: 8) == 0)
+        for x in stride(from: 1.0, to: Double(pixels.width) - 1, by: 4) {
+            for y in stride(from: 1.0, to: Double(pixels.height) - 1, by: 4) {
+                #expect(pixels.alpha(atX: x, y: y) == 0)
+            }
         }
     }
 
@@ -76,10 +78,14 @@ struct NotchPanelViewTests {
         #expect(pixels.alpha(atX: (strip.maxX + CGFloat(pixels.width)) / 2, y: strip.midY) == 0)
     }
 
-    @Test func hiddenLeavesADisplayWithoutANotchUntouched() throws {
+    @Test func hiddenMarksTheSimulatedNotchAndNothingElse() throws {
         let pixels = try render(NotchPanelModel(), on: simulated)
+        let centre = (x: Double(pixels.width) / 2, y: Double(pixels.height) / 2)
 
-        for x in stride(from: 1.0, to: Double(pixels.width) - 1, by: 4) {
+        #expect(pixels.alpha(atX: centre.x, y: centre.y) == 255)
+
+        for x in stride(from: 1.0, to: Double(pixels.width) - 1, by: 4)
+        where abs(x - centre.x) > 12 {
             for y in stride(from: 1.0, to: Double(pixels.height) - 1, by: 4) {
                 #expect(pixels.alpha(atX: x, y: y) == 0)
             }
