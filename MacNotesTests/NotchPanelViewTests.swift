@@ -92,6 +92,18 @@ struct NotchPanelViewTests {
         }
     }
 
+    @Test(arguments: [0.4, 0.7, 1.0])
+    func theNotchStaysCentredWhileThePanelIsStillGrowing(fraction: CGFloat) throws {
+        let model = expanded()
+        let pixels = try render(model, on: simulated, grownTo: fraction)
+        let strip = simulated.notchGap(for: model.state)
+
+        for x in stride(from: 0.0, to: Double(pixels.width) / 2, by: 2) {
+            let mirrored = Double(pixels.width) - 1 - x
+            #expect(pixels.alpha(atX: x, y: strip.midY) == pixels.alpha(atX: mirrored, y: strip.midY))
+        }
+    }
+
     private func collapsed() -> NotchPanelModel {
         NotchPanelModel(state: .collapsed)
     }
@@ -102,11 +114,17 @@ struct NotchPanelViewTests {
         return model
     }
 
-    private func render(_ model: NotchPanelModel, on metrics: NotchMetrics) throws -> Pixels {
+    private func render(
+        _ model: NotchPanelModel,
+        on metrics: NotchMetrics,
+        grownTo fraction: CGFloat = 1
+    ) throws -> Pixels {
         let frame = metrics.panelFrame(for: model.state)
         let renderer = ImageRenderer(
             content: NotchPanelView(metrics: metrics, model: model)
-                .frame(width: frame.width, height: frame.height)
+                .frame(
+                    width: (frame.width * fraction).rounded(),
+                    height: (frame.height * fraction).rounded())
         )
         renderer.scale = 1
         return try Pixels(try #require(renderer.cgImage))

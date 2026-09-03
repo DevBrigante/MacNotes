@@ -82,8 +82,8 @@ final class NotchWindowController {
         let frame = intendedFrame
         if animated {
             NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.18
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 panel.animator().setFrame(frame, display: true)
             }
         } else {

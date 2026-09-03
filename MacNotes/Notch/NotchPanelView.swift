@@ -8,20 +8,22 @@ struct NotchPanelView: View {
     private let markerDiameter: CGFloat = 6
 
     var body: some View {
-        VStack(spacing: 0) {
+        let panel = metrics.panelFrame(for: model.state).size
+        return VStack(spacing: 0) {
             strip
             if model.state == .expanded {
                 readout
             }
         }
+        .frame(width: panel.width, height: panel.height, alignment: .top)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .clipped()
     }
 
     private var strip: some View {
         let gap = metrics.notchGap(for: model.state)
         return HStack(spacing: 0) {
             flank(rounding: .bottomLeading)
-                .frame(width: gap.minX)
             notch
                 .frame(width: gap.width)
             flank(rounding: .bottomTrailing)
