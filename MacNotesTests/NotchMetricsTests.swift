@@ -4,8 +4,6 @@ import Testing
 
 @testable import MacNotes
 
-/// A 14" MacBook Pro as `NSScreen` describes it: a 200pt notch centred in a
-/// 37pt strip at the top of a 1512x982 display.
 private let screenFrame = CGRect(x: 0, y: 0, width: 1512, height: 982)
 private let stripHeight: CGFloat = 37
 private let notchWidth: CGFloat = 200
@@ -37,9 +35,6 @@ private func externalDisplay() -> NotchMetrics {
 }
 
 struct NotchMetricsTests {
-
-    // MARK: Reading the display
-
     @Test func readsThePhysicalNotchFromTheAuxiliaryAreas() {
         let metrics = builtInDisplay()
 
@@ -67,8 +62,6 @@ struct NotchMetricsTests {
         #expect(metrics.notchRect.midX == metrics.screenFrame.midX)
         #expect(metrics.notchRect.maxY == metrics.screenFrame.maxY)
     }
-
-    // MARK: Placing the panel
 
     @Test func hiddenFitsTheNotchSilhouette() {
         #expect(builtInDisplay().panelFrame(for: .hidden) == builtInDisplay().notchRect)
@@ -105,8 +98,6 @@ struct NotchMetricsTests {
         let frame = metrics.panelFrame(for: state)
         let gap = metrics.notchGap(for: state)
 
-        // The gap is expressed in the panel's own space, top-left origin. Put it
-        // back into screen coordinates: it has to land on the camera, exactly.
         #expect(abs(frame.minX + gap.minX - metrics.notchRect.minX) <= 1)
         #expect(gap.width == metrics.notchRect.width)
         #expect(gap.height == metrics.notchRect.height)

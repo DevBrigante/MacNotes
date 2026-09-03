@@ -4,7 +4,6 @@ import Testing
 
 @MainActor
 struct NotchPanelModelTests {
-
     @Test func restsHiddenUntilTheCursorArrives() {
         let model = NotchPanelModel()
 
