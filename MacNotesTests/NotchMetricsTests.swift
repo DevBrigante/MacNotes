@@ -25,12 +25,12 @@ private func builtInDisplay(
     )
 }
 
-private func externalDisplay() -> NotchMetrics {
+private func externalDisplay(menuBarHeight: CGFloat = 24) -> NotchMetrics {
     NotchMetrics(
         screenFrame: CGRect(x: 1512, y: 0, width: 2560, height: 1440),
         auxiliaryTopLeft: nil,
         auxiliaryTopRight: nil,
-        menuBarHeight: 24
+        menuBarHeight: menuBarHeight
     )
 }
 
@@ -39,10 +39,11 @@ struct NotchMetricsTests {
         let metrics = builtInDisplay()
 
         #expect(metrics.hasPhysicalNotch)
+        #expect(metrics.drawsItsOwnNotch == false)
         #expect(metrics.notchRect.width == notchWidth)
         #expect(metrics.notchRect.height == stripHeight)
-        #expect(metrics.notchRect.midX == screenFrame.midX)
-        #expect(metrics.notchRect.maxY == screenFrame.maxY)
+        #expect(metrics.notchRect.midX == metrics.screenFrame.midX)
+        #expect(metrics.notchRect.maxY == metrics.screenFrame.maxY)
     }
 
     @Test func placesTheNotchRelativeToItsOwnDisplay() {
@@ -53,18 +54,47 @@ struct NotchMetricsTests {
         #expect(metrics.notchRect.maxY == secondary.maxY)
     }
 
-    @Test func placesThePanelOnADisplayWithNoNotchAtAll() {
+    @Test func simulatesANotchWhereTheDisplayHasNone() {
         let metrics = externalDisplay()
 
-        #expect(metrics.hasPhysicalNotch == false)
-        #expect(metrics.notchRect.width == NotchMetrics.placeholderNotchWidth)
-        #expect(metrics.notchRect.height == 24)
+        #expect(metrics.drawsItsOwnNotch)
+        #expect(metrics.notchRect.width == NotchMetrics.simulatedNotchWidth)
         #expect(metrics.notchRect.midX == metrics.screenFrame.midX)
         #expect(metrics.notchRect.maxY == metrics.screenFrame.maxY)
     }
 
+    @Test func theSimulatedNotchIsAsTallAsThatDisplaysMenuBar() {
+        #expect(externalDisplay(menuBarHeight: 24).notchRect.height == 24)
+        #expect(externalDisplay(menuBarHeight: 37).notchRect.height == 37)
+    }
+
+    @Test func theSimulatedNotchNeverHangsBelowTheMenuBar() {
+        let metrics = externalDisplay(menuBarHeight: 24)
+
+        #expect(metrics.panelFrame(for: .collapsed).height == 24)
+        #expect(metrics.panelFrame(for: .hidden).height == 24)
+    }
+
+    @Test func measuresTheMenuBarOnTheDisplayItIsGiven() {
+        let frame = CGRect(x: 0, y: 0, width: 2560, height: 1440)
+        let visible = CGRect(x: 0, y: 0, width: 2560, height: 1416)
+
+        #expect(
+            NotchMetrics.menuBarHeight(
+                frame: frame, visibleFrame: visible, statusBarThickness: 24) == 24)
+    }
+
+    @Test func fallsBackToTheSystemMenuBarWhereTheDisplayDrawsNone() {
+        let frame = CGRect(x: 0, y: 0, width: 2560, height: 1440)
+
+        #expect(
+            NotchMetrics.menuBarHeight(
+                frame: frame, visibleFrame: frame, statusBarThickness: 24) == 24)
+    }
+
     @Test func hiddenFitsTheNotchSilhouette() {
         #expect(builtInDisplay().panelFrame(for: .hidden) == builtInDisplay().notchRect)
+        #expect(externalDisplay().panelFrame(for: .hidden) == externalDisplay().notchRect)
     }
 
     @Test func collapsedFlanksTheNotchOnBothSides() {
@@ -75,8 +105,9 @@ struct NotchMetricsTests {
         #expect(frame.height == stripHeight)
     }
 
-    @Test func expandedHangsBelowTheStrip() {
-        let metrics = builtInDisplay()
+    @Test(arguments: Display.allCases)
+    func expandedHangsBelowTheStrip(display: Display) {
+        let metrics = display.metrics
         let collapsed = metrics.panelFrame(for: .collapsed)
         let expanded = metrics.panelFrame(for: .expanded)
 
@@ -85,16 +116,16 @@ struct NotchMetricsTests {
         #expect(expanded.minY < collapsed.minY)
     }
 
-    @Test(arguments: NotchPanelState.allCases)
-    func everyStateHangsFromTheTopOfTheScreen(state: NotchPanelState) {
-        let metrics = builtInDisplay()
+    @Test(arguments: NotchPanelState.allCases, Display.allCases)
+    func everyStateHangsFromTheTopOfTheScreen(state: NotchPanelState, display: Display) {
+        let metrics = display.metrics
 
-        #expect(metrics.panelFrame(for: state).maxY == screenFrame.maxY)
+        #expect(metrics.panelFrame(for: state).maxY == metrics.screenFrame.maxY)
     }
 
-    @Test(arguments: NotchPanelState.allCases)
-    func everyStateLeavesTheNotchEmpty(state: NotchPanelState) {
-        let metrics = builtInDisplay()
+    @Test(arguments: NotchPanelState.allCases, Display.allCases)
+    func everyStateLeavesTheNotchEmpty(state: NotchPanelState, display: Display) {
+        let metrics = display.metrics
         let frame = metrics.panelFrame(for: state)
         let gap = metrics.notchGap(for: state)
 
@@ -113,5 +144,17 @@ struct NotchMetricsTests {
         let gap = metrics.notchGap(for: state)
 
         #expect(abs(gap.minX - (frame.width - gap.maxX)) <= 1)
+    }
+
+    enum Display: CaseIterable {
+        case builtIn
+        case external
+
+        var metrics: NotchMetrics {
+            switch self {
+            case .builtIn: builtInDisplay()
+            case .external: externalDisplay()
+            }
+        }
     }
 }

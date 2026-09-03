@@ -5,25 +5,27 @@ struct NotchPanelView: View {
     let model: NotchPanelModel
 
     private let cornerRadius: CGFloat = 10
+    private let markerDiameter: CGFloat = 6
 
     var body: some View {
-        VStack(spacing: 0) {
+        let panel = metrics.panelFrame(for: model.state).size
+        return VStack(spacing: 0) {
             strip
             if model.state == .expanded {
                 readout
             }
         }
+        .frame(width: panel.width, height: panel.height, alignment: .top)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .clipped()
     }
 
     private var strip: some View {
         let gap = metrics.notchGap(for: model.state)
         return HStack(spacing: 0) {
             flank(rounding: .bottomLeading)
-                .frame(width: gap.minX)
-            Color.clear
+            notch
                 .frame(width: gap.width)
-                .allowsHitTesting(false)
             flank(rounding: .bottomTrailing)
         }
         .frame(height: gap.height)
@@ -34,8 +36,32 @@ struct NotchPanelView: View {
             bottomLeadingRadius: corner == .bottomLeading ? cornerRadius : 0,
             bottomTrailingRadius: corner == .bottomTrailing ? cornerRadius : 0
         )
-        .fill(model.state == .collapsed ? Color.black : Color.clear)
+        .fill(flankFill)
         .frame(maxWidth: .infinity)
+    }
+
+    private var notch: some View {
+        Rectangle()
+            .fill(notchFill)
+            .overlay { marker }
+            .allowsHitTesting(metrics.drawsItsOwnNotch)
+    }
+
+    @ViewBuilder
+    private var marker: some View {
+        if metrics.drawsItsOwnNotch && model.state == .hidden {
+            Circle()
+                .fill(.red)
+                .frame(width: markerDiameter, height: markerDiameter)
+        }
+    }
+
+    private var flankFill: Color {
+        model.state == .collapsed ? .black : .clear
+    }
+
+    private var notchFill: Color {
+        metrics.drawsItsOwnNotch && model.state != .hidden ? .black : .clear
     }
 
     private var readout: some View {

@@ -8,7 +8,7 @@ nonisolated struct NotchMetrics: Equatable {
         static let expandedDrop: CGFloat = 168
     }
 
-    static let placeholderNotchWidth: CGFloat = 200
+    static let simulatedNotchWidth: CGFloat = 200
 
     let screenFrame: CGRect
     let notchRect: CGRect
@@ -42,13 +42,17 @@ nonisolated struct NotchMetrics: Equatable {
         } else {
             let height = max(menuBarHeight, 1)
             self.notchRect = CGRect(
-                x: screenFrame.midX - Self.placeholderNotchWidth / 2,
+                x: screenFrame.midX - Self.simulatedNotchWidth / 2,
                 y: screenFrame.maxY - height,
-                width: Self.placeholderNotchWidth,
+                width: Self.simulatedNotchWidth,
                 height: height
             )
             self.hasPhysicalNotch = false
         }
+    }
+
+    var drawsItsOwnNotch: Bool {
+        hasPhysicalNotch == false
     }
 
     func panelFrame(for state: NotchPanelState) -> CGRect {
@@ -91,7 +95,19 @@ extension NotchMetrics {
             screenFrame: screen.frame,
             auxiliaryTopLeft: screen.auxiliaryTopLeftArea,
             auxiliaryTopRight: screen.auxiliaryTopRightArea,
-            menuBarHeight: NSStatusBar.system.thickness
+            menuBarHeight: Self.menuBarHeight(
+                frame: screen.frame,
+                visibleFrame: screen.visibleFrame,
+                statusBarThickness: NSStatusBar.system.thickness
+            )
         )
+    }
+
+    static func menuBarHeight(
+        frame: CGRect,
+        visibleFrame: CGRect,
+        statusBarThickness: CGFloat
+    ) -> CGFloat {
+        max(frame.maxY - visibleFrame.maxY, statusBarThickness)
     }
 }

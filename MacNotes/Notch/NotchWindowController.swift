@@ -34,10 +34,7 @@ final class NotchWindowController {
     }
 
     private static func activeDisplayMetrics() -> NotchMetrics {
-        let screen =
-            NSScreen.screens.first { $0.auxiliaryTopLeftArea != nil }
-            ?? NSScreen.main
-            ?? NSScreen.screens.first
+        let screen = NSScreen.main ?? NSScreen.screens.first
 
         guard let screen else {
             return NotchMetrics(screenFrame: .zero, notchRect: .zero, hasPhysicalNotch: false)
@@ -85,8 +82,8 @@ final class NotchWindowController {
         let frame = intendedFrame
         if animated {
             NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.18
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 panel.animator().setFrame(frame, display: true)
             }
         } else {
