@@ -5,7 +5,8 @@ nonisolated struct NotchMetrics: Equatable {
     enum Layout {
         static let collapsedFlank: CGFloat = 72
         static let expandedFlank: CGFloat = 132
-        static let expandedDrop: CGFloat = 168
+        static let collapsedDrop: CGFloat = 10
+        static let expandedDrop: CGFloat = 140
     }
 
     static let simulatedNotchWidth: CGFloat = 200
@@ -84,7 +85,11 @@ nonisolated struct NotchMetrics: Equatable {
     }
 
     private func drop(for state: NotchPanelState) -> CGFloat {
-        state == .expanded ? Layout.expandedDrop : 0
+        switch state {
+        case .hidden: 0
+        case .collapsed: Layout.collapsedDrop
+        case .expanded: Layout.expandedDrop
+        }
     }
 }
 

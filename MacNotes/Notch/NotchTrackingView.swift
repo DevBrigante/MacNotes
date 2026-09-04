@@ -5,6 +5,10 @@ final class NotchTrackingView: NSView {
 
     private var area: NSTrackingArea?
 
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         guard area == nil else { return }

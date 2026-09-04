@@ -43,6 +43,7 @@ final class JSONFileTests {
             folder.text(of: "tasks.json") == """
                 [
                   {
+                    "allotted" : 25,
                     "day" : "2026-09-03",
                     "id" : "00000000-0000-0000-0000-0000000000FF",
                     "title" : "Book the flight"

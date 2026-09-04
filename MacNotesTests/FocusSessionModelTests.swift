@@ -36,7 +36,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func startingASessionRunsItAgainstItsTask() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
 
         #expect(sessions.session?.task == task)
         #expect(sessions.isRunning)
@@ -45,7 +45,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func theRemainingTimeFollowsTheClock() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
 
         stopwatch.advance(by: 60)
         letTheClockRun()
@@ -54,27 +54,27 @@ final class FocusSessionModelTests {
     }
 
     @Test func startingOnAnotherTaskLeavesNoTraceOfThePreviousSession() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
         stopwatch.advance(by: 5 * 60)
 
-        sessions.start(.fifteenMinutes, on: anotherTask)
+        sessions.start(.init(minutes: 15), on: anotherTask)
 
         #expect(sessions.session?.task == anotherTask)
         #expect(sessions.remaining == 15 * 60)
     }
 
     @Test func switchingLeavesNoSecondClockBehind() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
         let clock = sessions.clock
 
-        sessions.start(.fifteenMinutes, on: anotherTask)
+        sessions.start(.init(minutes: 15), on: anotherTask)
 
         #expect(sessions.clock === clock)
     }
 
     @Test func aSessionSwitchedAwayFromNeverRunsOutLater() {
-        sessions.start(.fifteenMinutes, on: task)
-        sessions.start(.sixtyMinutes, on: anotherTask)
+        sessions.start(.init(minutes: 15), on: task)
+        sessions.start(.init(minutes: 60), on: anotherTask)
 
         stopwatch.advance(by: 15 * 60)
         letTheClockRun()
@@ -84,7 +84,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func pausingHoldsTheTimeStillAndPutsTheClockDown() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
         stopwatch.advance(by: 60)
 
         sessions.pause()
@@ -98,7 +98,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func resumingCarriesOnAndPicksTheClockBackUp() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
         stopwatch.advance(by: 60)
         sessions.pause()
         stopwatch.advance(by: 10 * 60)
@@ -115,7 +115,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func aPausedSessionIsNotEndedByTimePassing() {
-        sessions.start(.fifteenMinutes, on: task)
+        sessions.start(.init(minutes: 15), on: task)
         sessions.pause()
 
         stopwatch.advance(by: 60 * 60)
@@ -125,7 +125,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func aSessionEndsItselfWhenItsTimeRunsOut() {
-        sessions.start(.fifteenMinutes, on: task)
+        sessions.start(.init(minutes: 15), on: task)
 
         stopwatch.advance(by: 15 * 60)
         letTheClockRun()
@@ -136,7 +136,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func endingASessionClearsIt() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
 
         sessions.end()
 
@@ -147,7 +147,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func aSessionIsNoLongerRunningTheMomentItsTimeIsUp() {
-        sessions.start(.fifteenMinutes, on: task)
+        sessions.start(.init(minutes: 15), on: task)
 
         stopwatch.advance(by: 15 * 60)
 
@@ -155,7 +155,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func theProgressGrowsAsTheSessionRuns() {
-        sessions.start(.fifteenMinutes, on: task)
+        sessions.start(.init(minutes: 15), on: task)
 
         #expect(sessions.progress == 0)
 
@@ -171,7 +171,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func theProgressHoldsStillWhilePaused() {
-        sessions.start(.fifteenMinutes, on: task)
+        sessions.start(.init(minutes: 15), on: task)
         stopwatch.advance(by: 450)
 
         sessions.pause()
@@ -182,11 +182,11 @@ final class FocusSessionModelTests {
     }
 
     @Test func switchingTaskStartsTheProgressOverFromEmpty() {
-        sessions.start(.fifteenMinutes, on: task)
+        sessions.start(.init(minutes: 15), on: task)
         stopwatch.advance(by: 675)
         letTheClockRun()
 
-        sessions.start(.sixtyMinutes, on: anotherTask)
+        sessions.start(.init(minutes: 60), on: anotherTask)
 
         #expect(sessions.progress == 0)
     }
@@ -194,7 +194,7 @@ final class FocusSessionModelTests {
     @Test func thereIsNoProgressWithoutASession() {
         #expect(sessions.progress == 0)
 
-        sessions.start(.fifteenMinutes, on: task)
+        sessions.start(.init(minutes: 15), on: task)
         stopwatch.advance(by: 450)
         letTheClockRun()
         sessions.end()
@@ -206,13 +206,13 @@ final class FocusSessionModelTests {
         var underway: [Bool] = []
         sessions.sessionIsUnderway = { underway.append($0) }
 
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
 
         #expect(underway == [true])
     }
 
     @Test func aSessionRunningOutSaysSo() {
-        sessions.start(.fifteenMinutes, on: task)
+        sessions.start(.init(minutes: 15), on: task)
         var underway: [Bool] = []
         sessions.sessionIsUnderway = { underway.append($0) }
 
@@ -226,7 +226,7 @@ final class FocusSessionModelTests {
         var underway: [Bool] = []
         sessions.sessionIsUnderway = { underway.append($0) }
 
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
         sessions.pause()
         sessions.resume()
 
@@ -234,7 +234,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func theMacGoingToSleepEndsTheSession() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
 
         closeTheLid()
 
@@ -244,7 +244,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func theMacGoingToSleepEndsAPausedSessionToo() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
         sessions.pause()
 
         closeTheLid()
@@ -253,7 +253,7 @@ final class FocusSessionModelTests {
     }
 
     @Test func theMacGoingToSleepSaysTheSessionIsOver() {
-        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.start(.init(minutes: 25), on: task)
         var underway: [Bool] = []
         sessions.sessionIsUnderway = { underway.append($0) }
 

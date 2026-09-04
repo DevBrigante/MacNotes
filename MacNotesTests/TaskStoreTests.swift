@@ -177,4 +177,181 @@ final class TaskStoreTests {
 
         #expect(store.couldNotSave == false)
     }
+
+    @Test func quickCaptureGivesANewTaskTheDayItWasCapturedOn() throws {
+        store.load(on: today)
+
+        let captured = try #require(store.capture("Book the flight", on: today))
+
+        #expect(captured.day == today)
+        #expect(captured.title == "Book the flight")
+        #expect(store.tasks == [captured])
+    }
+
+    @Test func quickCaptureTrimsTheTitleAndRefusesABlankOne() {
+        store.load(on: today)
+
+        #expect(store.capture("  Book the flight  ", on: today)?.title == "Book the flight")
+        #expect(store.capture("   ", on: today) == nil)
+        #expect(store.capture("", on: today) == nil)
+        #expect(store.tasks.count == 1)
+    }
+
+    @Test func completingATaskRecordsTheDayItWasDoneOn() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: yesterday))
+
+        store.complete(store.tasks[0], on: today)
+
+        #expect(store.tasks[0].completedOn == today)
+        #expect(store.tasks[0].day == yesterday)
+    }
+
+    @Test func completingATaskTwiceKeepsTheFirstDay() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+
+        store.complete(store.tasks[0], on: yesterday)
+        store.complete(store.tasks[0], on: today)
+
+        #expect(store.tasks[0].completedOn == yesterday)
+    }
+
+    @Test func aCompletionReachesDiskOnItsOwn() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+        store.complete(store.tasks[0], on: today)
+
+        letTheWritesSettle()
+
+        #expect(onDisk == .value(store.tasks))
+    }
+
+    @Test func theDaysTasksAreTheOnlyOnesItAnswersWith() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+        store.add(Task(title: "Renew the passport", day: tomorrow))
+        store.add(Task(title: "Read the manual"))
+
+        #expect(store.onTheDay(today).map(\.title) == ["Book the flight"])
+    }
+
+    @Test func theDaysTasksKeepTheOrderTheyWereGivenIn() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+        store.add(Task(title: "Renew the passport", day: today))
+        store.complete(store.tasks[0], on: today)
+
+        #expect(store.onTheDay(today).map(\.title) == ["Book the flight", "Renew the passport"])
+    }
+
+    @Test func whatIsUnscheduledIsWorkStillWaitingForADay() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+        store.add(Task(title: "Read the manual"))
+        store.add(Task(title: "Sharpen the knives"))
+        store.complete(store.tasks[2], on: today)
+
+        #expect(store.unscheduled.map(\.title) == ["Read the manual"])
+    }
+}
+
+@MainActor
+final class TaskStoreOrderTests {
+    private let folder = TemporaryFolder()
+    private let today = Day.today()
+
+    deinit {
+        folder.discard()
+    }
+
+    private func store(_ planned: [Task] = []) -> TaskStore {
+        let store = TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60)
+        planned.forEach(store.add)
+        return store
+    }
+
+    @Test func aTaskDraggedDownTakesTheOrderOfTheOneItPassed() {
+        let tasks = store([
+            Task(title: "First", day: today),
+            Task(title: "Second", day: today),
+            Task(title: "Third", day: today),
+        ])
+
+        tasks.move(within: tasks.onTheDay(today), from: 0, to: 2)
+
+        #expect(tasks.onTheDay(today).map(\.title) == ["Second", "Third", "First"])
+    }
+
+    @Test func aTaskDraggedUpDoesTheSameInReverse() {
+        let tasks = store([
+            Task(title: "First", day: today),
+            Task(title: "Second", day: today),
+            Task(title: "Third", day: today),
+        ])
+
+        tasks.move(within: tasks.onTheDay(today), from: 2, to: 0)
+
+        #expect(tasks.onTheDay(today).map(\.title) == ["Third", "First", "Second"])
+    }
+
+    @Test func reorderingADayLeavesEveryOtherTaskWhereItWas() {
+        let elsewhere = Day(year: 2030, month: 1, day: 1)
+        let tasks = store([
+            Task(title: "First", day: today),
+            Task(title: "Elsewhere", day: elsewhere),
+            Task(title: "Second", day: today),
+        ])
+
+        tasks.move(within: tasks.onTheDay(today), from: 0, to: 1)
+
+        #expect(tasks.tasks.map(\.title) == ["Second", "Elsewhere", "First"])
+    }
+
+    @Test func aMoveThatGoesNowhereChangesNothing() {
+        let tasks = store([Task(title: "First", day: today), Task(title: "Second", day: today)])
+
+        tasks.move(within: tasks.onTheDay(today), from: 0, to: 0)
+        tasks.move(within: tasks.onTheDay(today), from: 5, to: 0)
+
+        #expect(tasks.onTheDay(today).map(\.title) == ["First", "Second"])
+    }
+
+    @Test func theLastOfFourReachesTheFrontInOneMove() {
+        let tasks = store([
+            Task(title: "First", day: today),
+            Task(title: "Second", day: today),
+            Task(title: "Third", day: today),
+            Task(title: "Fourth", day: today),
+        ])
+
+        tasks.move(within: tasks.onTheDay(today), from: 3, to: 0)
+
+        #expect(
+            tasks.onTheDay(today).map(\.title) == ["Fourth", "First", "Second", "Third"])
+    }
+
+    @Test func anAllottedTimeIsKeptAgainstTheTask() {
+        let task = Task(title: "Book the flight", day: today)
+        let tasks = store([task])
+
+        #expect(tasks.task(task.id)?.allotted == .standard)
+
+        tasks.allot(AllottedTime(minutes: 45), to: task.id)
+
+        #expect(tasks.task(task.id)?.allotted.minutes == 45)
+    }
+
+    @Test func completionsAreCountedForTheDayTheyLandedOn() {
+        let yesterday = Day(year: 2026, month: 9, day: 3)
+        let one = Task(title: "First", day: today)
+        let two = Task(title: "Second", day: today)
+        let tasks = store([one, two, Task(title: "Third", day: today)])
+
+        tasks.complete(one, on: today)
+        tasks.complete(two, on: today)
+
+        #expect(tasks.completions(on: today) == 2)
+        #expect(tasks.completions(on: yesterday) == 0)
+    }
 }

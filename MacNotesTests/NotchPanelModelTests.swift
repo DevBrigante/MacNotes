@@ -93,4 +93,78 @@ struct NotchPanelModelTests {
 
         #expect(model.state == .expanded)
     }
+
+    @Test func quickCaptureHoldsThePanelOpenWhenTheCursorLeaves() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+        model.captureChanged(hasTheKeyboard: true)
+
+        model.cursorMoved(isOver: false)
+
+        #expect(model.state == .expanded)
+    }
+
+    @Test func lettingTheKeyboardGoSettlesThePanelAgain() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+        model.captureChanged(hasTheKeyboard: true)
+        model.cursorMoved(isOver: false)
+
+        model.captureChanged(hasTheKeyboard: false)
+
+        #expect(model.state == .hidden)
+    }
+
+    @Test func lettingTheKeyboardGoOverASessionCollapsesRatherThanHides() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+        model.cursorMoved(isOver: true)
+        model.captureChanged(hasTheKeyboard: true)
+        model.cursorMoved(isOver: false)
+
+        model.captureChanged(hasTheKeyboard: false)
+
+        #expect(model.state == .collapsed)
+    }
+
+    @Test func aTaskBeingDraggedHoldsThePanelOpenWhenTheCursorLeaves() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+        model.dragChanged(isDragging: true)
+
+        model.cursorMoved(isOver: false)
+
+        #expect(model.state == .expanded)
+
+        model.dragChanged(isDragging: false)
+
+        #expect(model.state == .hidden)
+    }
+
+    @Test func anAllottedTimeBeingSetHoldsThePanelOpenWhenTheCursorLeaves() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+        model.allottingChanged(isAllotting: true)
+
+        model.cursorMoved(isOver: false)
+
+        #expect(model.state == .expanded)
+        #expect(model.isAllotting)
+
+        model.allottingChanged(isAllotting: false)
+
+        #expect(model.state == .hidden)
+    }
+
+    @Test func thePanelClosingForgetsThatAnAllottedTimeWasBeingSet() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+        model.allottingChanged(isAllotting: true)
+        model.allottingChanged(isAllotting: false)
+
+        model.cursorMoved(isOver: false)
+
+        #expect(model.isAllotting == false)
+        #expect(model.state == .hidden)
+    }
 }

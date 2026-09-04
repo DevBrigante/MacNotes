@@ -51,6 +51,73 @@ final class TaskStore {
         scheduleSave()
     }
 
+    @discardableResult
+    func capture(_ title: String, on day: Day) -> Task? {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard title.isEmpty == false else { return nil }
+
+        let task = Task(title: title, day: day)
+        add(task)
+        return task
+    }
+
+    func complete(_ task: Task, on day: Day) {
+        guard let index = tasks.firstIndex(where: { $0.id == task.id }),
+            tasks[index].isCompleted == false
+        else { return }
+
+        tasks[index].complete(on: day)
+        scheduleSave()
+    }
+
+    func allot(_ time: AllottedTime, to id: Task.ID) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        guard tasks[index].allotted != time else { return }
+        tasks[index].allotted = time
+        scheduleSave()
+    }
+
+    func move(within listed: [Task], from: Int, to: Int) {
+        guard listed.indices.contains(from), listed.indices.contains(to), from != to else {
+            return
+        }
+        let slots = listed.compactMap { listing in
+            tasks.firstIndex { $0.id == listing.id }
+        }
+        guard slots.count == listed.count else { return }
+
+        var reordered = listed
+        reordered.insert(reordered.remove(at: from), at: to)
+
+        for (slot, task) in zip(slots, reordered) {
+            tasks[slot] = task
+        }
+        scheduleSave()
+    }
+
+    func task(_ id: Task.ID) -> Task? {
+        tasks.first { $0.id == id }
+    }
+
+    func completions(on day: Day) -> Int {
+        tasks.filter { $0.completedOn == day }.count
+    }
+
+    func onTheDay(_ day: Day) -> [Task] {
+        tasks.filter { $0.day == day }
+    }
+
+    func listing(on day: Day, keeping completed: Set<Task.ID>) -> [Task] {
+        let showing = onTheDay(day).filter {
+            $0.isCompleted == false || completed.contains($0.id)
+        }
+        return showing.filter { $0.isCompleted == false } + showing.filter(\.isCompleted)
+    }
+
+    var unscheduled: [Task] {
+        tasks.filter { $0.isUnscheduled && $0.isCompleted == false }
+    }
+
     func save() {
         pendingSave?.invalidate()
         pendingSave = nil

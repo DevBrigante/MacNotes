@@ -4,122 +4,108 @@ struct NotchPanelView: View {
     let metrics: NotchMetrics
     let model: NotchPanelModel
     let sessions: FocusSessionModel
+    let tasks: TaskStore
 
     private let cornerRadius: CGFloat = 10
     private let markerDiameter: CGFloat = 6
 
     var body: some View {
         let panel = metrics.panelFrame(for: model.state).size
-        return VStack(spacing: 0) {
-            strip
-            if model.state == .expanded {
-                readout
-            }
+        return ZStack(alignment: .top) {
+            surface
+            content
+            tray
         }
         .frame(width: panel.width, height: panel.height, alignment: .top)
-        .overlay(alignment: .top) { tray }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .clipped()
     }
 
     @ViewBuilder
-    private var tray: some View {
-        if model.state != .hidden, sessions.session != nil {
-            let outline = trayOutline
-            ProgressTray(
-                grown: sessions.progress,
-                reach: trayReach,
-                panelCornerRadius: cornerRadius
+    private var surface: some View {
+        if model.state != .hidden {
+            UnevenRoundedRectangle(
+                bottomLeadingRadius: cornerRadius,
+                bottomTrailingRadius: cornerRadius
             )
-            .frame(width: outline.width, height: outline.height)
-            .offset(y: outline.minY)
+            .fill(.black)
         }
     }
 
-    private var trayReach: CGFloat {
-        model.state == .expanded
-            ? metrics.panelFrame(for: model.state).width / 2
-            : metrics.notchGap(for: model.state).minX
-    }
-
-    private var trayOutline: CGRect {
-        let panel = metrics.panelFrame(for: model.state)
-        let strip = metrics.notchGap(for: model.state)
-        guard model.state == .expanded else {
-            return CGRect(x: 0, y: 0, width: panel.width, height: strip.height)
+    @ViewBuilder
+    private var content: some View {
+        switch model.state {
+        case .hidden: marker
+        case .collapsed: readout
+        case .expanded: today
         }
-        return CGRect(
-            x: 0,
-            y: strip.height,
-            width: panel.width,
-            height: panel.height - strip.height
-        )
-    }
-
-    private var strip: some View {
-        let gap = metrics.notchGap(for: model.state)
-        return HStack(spacing: 0) {
-            flank(rounding: .bottomLeading)
-            notch
-                .frame(width: gap.width)
-            flank(rounding: .bottomTrailing)
-        }
-        .frame(height: gap.height)
-    }
-
-    private func flank(rounding corner: Corner) -> some View {
-        UnevenRoundedRectangle(
-            bottomLeadingRadius: corner == .bottomLeading ? cornerRadius : 0,
-            bottomTrailingRadius: corner == .bottomTrailing ? cornerRadius : 0
-        )
-        .fill(flankFill)
-        .frame(maxWidth: .infinity)
-    }
-
-    private var notch: some View {
-        Rectangle()
-            .fill(notchFill)
-            .overlay { marker }
-            .allowsHitTesting(metrics.drawsItsOwnNotch)
     }
 
     @ViewBuilder
     private var marker: some View {
-        if metrics.drawsItsOwnNotch && model.state == .hidden {
+        if metrics.drawsItsOwnNotch {
             Circle()
                 .fill(.red)
                 .frame(width: markerDiameter, height: markerDiameter)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    }
-
-    private var flankFill: Color {
-        model.state == .collapsed ? .black : .clear
-    }
-
-    private var notchFill: Color {
-        metrics.drawsItsOwnNotch && model.state != .hidden ? .black : .clear
     }
 
     private var readout: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text("MacNotes — \(model.state.name)")
-                .font(.system(size: 12, weight: .semibold))
-            Text("Notch \(size(metrics.notchRect)) · \(metrics.hasPhysicalNotch ? "physical" : "simulated")")
-            Text("Display \(size(metrics.screenFrame))")
+        let gap = metrics.notchGap(for: .collapsed)
+        return HStack(spacing: 0) {
+            runningTask
+                .frame(width: gap.minX, alignment: .leading)
+            Spacer(minLength: 0)
+                .frame(width: gap.width)
+            runningTime
+                .frame(width: gap.minX, alignment: .trailing)
         }
-        .font(.system(size: 10))
-        .foregroundStyle(.white)
-        .padding(10)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(.black, in: RoundedRectangle(cornerRadius: cornerRadius))
+        .frame(height: gap.height)
     }
 
-    private func size(_ rect: CGRect) -> String {
-        "\(Int(rect.width.rounded())) x \(Int(rect.height.rounded()))"
+    @ViewBuilder
+    private var runningTask: some View {
+        if let title = runningTitle {
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+        }
     }
 
-    private enum Corner {
-        case bottomLeading
-        case bottomTrailing
+    @ViewBuilder
+    private var runningTime: some View {
+        if sessions.session != nil {
+            HStack(spacing: 4) {
+                Image(systemName: "timer")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(Countdown.text(sessions.remaining))
+                    .font(.system(size: 12, weight: .semibold).monospacedDigit())
+            }
+            .foregroundStyle(sessions.isRunning ? Color.white : Color.white.opacity(0.5))
+            .padding(.horizontal, 12)
+        }
+    }
+
+    private var runningTitle: String? {
+        sessions.session.flatMap { tasks.task($0.task)?.title }
+    }
+
+    private var today: some View {
+        VStack(spacing: 0) {
+            Color.clear
+                .frame(height: metrics.notchGap(for: .expanded).height)
+            TodayPanel(model: model, tasks: tasks, sessions: sessions)
+        }
+    }
+
+    @ViewBuilder
+    private var tray: some View {
+        if model.state != .hidden, sessions.session != nil {
+            ProgressTray(grown: sessions.progress, panelCornerRadius: cornerRadius)
+        }
     }
 }
