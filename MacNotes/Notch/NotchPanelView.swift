@@ -3,6 +3,7 @@ import SwiftUI
 struct NotchPanelView: View {
     let metrics: NotchMetrics
     let model: NotchPanelModel
+    let sessions: FocusSessionModel
 
     private let cornerRadius: CGFloat = 10
     private let markerDiameter: CGFloat = 6
@@ -16,8 +17,43 @@ struct NotchPanelView: View {
             }
         }
         .frame(width: panel.width, height: panel.height, alignment: .top)
+        .overlay(alignment: .top) { tray }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .clipped()
+    }
+
+    @ViewBuilder
+    private var tray: some View {
+        if model.state != .hidden, sessions.session != nil {
+            let outline = trayOutline
+            ProgressTray(
+                grown: sessions.progress,
+                reach: trayReach,
+                panelCornerRadius: cornerRadius
+            )
+            .frame(width: outline.width, height: outline.height)
+            .offset(y: outline.minY)
+        }
+    }
+
+    private var trayReach: CGFloat {
+        model.state == .expanded
+            ? metrics.panelFrame(for: model.state).width / 2
+            : metrics.notchGap(for: model.state).minX
+    }
+
+    private var trayOutline: CGRect {
+        let panel = metrics.panelFrame(for: model.state)
+        let strip = metrics.notchGap(for: model.state)
+        guard model.state == .expanded else {
+            return CGRect(x: 0, y: 0, width: panel.width, height: strip.height)
+        }
+        return CGRect(
+            x: 0,
+            y: strip.height,
+            width: panel.width,
+            height: panel.height - strip.height
+        )
     }
 
     private var strip: some View {

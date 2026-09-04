@@ -18,7 +18,8 @@ final class NotchWindowController {
 
     init() {
         metrics = Self.metrics(of: activeDisplay.screen)
-        hosting = NSHostingView(rootView: NotchPanelView(metrics: metrics, model: model))
+        hosting = NSHostingView(
+            rootView: NotchPanelView(metrics: metrics, model: model, sessions: sessions))
 
         hosting.sizingOptions = []
         hosting.translatesAutoresizingMaskIntoConstraints = false
@@ -70,7 +71,7 @@ final class NotchWindowController {
             activeDisplay = ActiveDisplay()
         }
         metrics = Self.metrics(of: activeDisplay.screen)
-        hosting.rootView = NotchPanelView(metrics: metrics, model: model)
+        hosting.rootView = NotchPanelView(metrics: metrics, model: model, sessions: sessions)
         place(animated: false)
     }
 
