@@ -33,7 +33,8 @@ final class TodayPanelTests {
         TodayCards(
             model: NotchPanelModel(), tasks: tasks, sessions: idle(),
             listed: tasks.listing(on: .today(), keeping: []), day: .today(),
-            accent: .blue, allotting: .constant(nil), justCompleted: .constant([]))
+            accent: .blue, allotting: nil, onAllot: { _ in }, onAct: {},
+            justCompleted: .constant([]))
     }
 
     @Test func theCardsWriteTheTasksTheDayIsCarrying() throws {

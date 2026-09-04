@@ -115,7 +115,7 @@ final class NotchWindowController {
     }
 
     var intendedFrame: NSRect {
-        metrics.panelFrame(for: model.state, allotting: model.isAllotting)
+        metrics.panelFrame(for: model.state)
     }
 
     private func place(animated: Bool) {

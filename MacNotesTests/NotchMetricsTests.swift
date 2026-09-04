@@ -83,21 +83,6 @@ struct NotchMetricsTests {
                 == metrics.notchRect.height + NotchMetrics.Layout.collapsedDrop)
     }
 
-    @Test func settingAnAllottedTimeGrowsOnlyTheExpandedPanel() {
-        let metrics = builtInDisplay()
-
-        #expect(
-            metrics.panelFrame(for: .expanded, allotting: true).height
-                - metrics.panelFrame(for: .expanded).height
-                == NotchMetrics.Layout.allottingDrop)
-        #expect(
-            metrics.panelFrame(for: .collapsed, allotting: true)
-                == metrics.panelFrame(for: .collapsed))
-        #expect(
-            metrics.panelFrame(for: .hidden, allotting: true)
-                == metrics.panelFrame(for: .hidden))
-    }
-
     @Test func measuresTheMenuBarOnTheDisplayItIsGiven() {
         let frame = CGRect(x: 0, y: 0, width: 2560, height: 1440)
         let visible = CGRect(x: 0, y: 0, width: 2560, height: 1416)

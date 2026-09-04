@@ -10,7 +10,7 @@ struct NotchPanelView: View {
     private let markerDiameter: CGFloat = 6
 
     var body: some View {
-        let panel = metrics.panelFrame(for: model.state, allotting: model.isAllotting).size
+        let panel = metrics.panelFrame(for: model.state).size
         return ZStack(alignment: .top) {
             surface
             content

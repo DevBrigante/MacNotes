@@ -23,8 +23,16 @@ struct TodayPanel: View {
         HStack(spacing: 0) {
             todo
             ActivityGraph(tasks: tasks, month: day)
+                .contentShape(Rectangle())
+                .onTapGesture { giveUpWhatWasOpen() }
         }
         .foregroundStyle(.white)
+        .background(
+            Color.black.opacity(0.001)
+                .contentShape(Rectangle())
+                .onTapGesture { letGo() }
+        )
+        .overlay { allottingLayer }
         .onChange(of: model.state) { forgetTheCompleted() }
         .onReceive(
             NotificationCenter.default.publisher(for: NSColor.systemColorsDidChangeNotification)
@@ -41,9 +49,6 @@ struct TodayPanel: View {
         VStack(alignment: .leading, spacing: 0) {
             heading
             cards
-            if let allotting, let task = tasks.task(allotting) {
-                picker(task)
-            }
             capture
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -62,6 +67,8 @@ struct TodayPanel: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 22)
+        .contentShape(Rectangle())
+        .onTapGesture { giveUpWhatWasOpen() }
     }
 
     @ViewBuilder
@@ -72,10 +79,13 @@ struct TodayPanel: View {
             ScrollView {
                 TodayCards(
                     model: model, tasks: tasks, sessions: sessions, listed: listed, day: day,
-                    accent: accent, allotting: $allotting, justCompleted: $justCompleted)
+                    accent: accent, allotting: allotting, onAllot: toggleAllotting,
+                    onAct: giveUpWhatWasOpen, justCompleted: $justCompleted)
             }
             .scrollIndicators(.never)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture { giveUpWhatWasOpen() }
         }
     }
 
@@ -84,6 +94,23 @@ struct TodayPanel: View {
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(Color.white.opacity(0.35))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture { giveUpWhatWasOpen() }
+    }
+
+    @ViewBuilder
+    private var allottingLayer: some View {
+        if let allotting, let task = tasks.task(allotting) {
+            ZStack(alignment: .bottomLeading) {
+                Color.black.opacity(0.001)
+                    .contentShape(Rectangle())
+                    .onTapGesture { closeAllotting() }
+                picker(task)
+                    .padding(.trailing, ActivityGraph.width)
+                    .padding(.bottom, 28)
+            }
+            .transition(.opacity)
+        }
     }
 
     private func picker(_ task: Task) -> some View {
@@ -165,6 +192,26 @@ struct TodayPanel: View {
         allotting = nil
     }
 
+    private func toggleAllotting(_ task: Task) {
+        letGo()
+        let opening = allotting != task.id
+        withAnimation(.easeOut(duration: 0.12)) {
+            allotting = opening ? task.id : nil
+        }
+        model.allottingChanged(isAllotting: opening)
+    }
+
+    private func closeAllotting() {
+        guard allotting != nil else { return }
+        withAnimation(.easeOut(duration: 0.12)) { allotting = nil }
+        model.allottingChanged(isAllotting: false)
+    }
+
+    private func giveUpWhatWasOpen() {
+        letGo()
+        closeAllotting()
+    }
+
     private func keep() {
         tasks.capture(draft, on: day)
         draft = ""
@@ -183,8 +230,10 @@ struct TodayCards: View {
     let listed: [Task]
     let day: Day
     let accent: Color
+    let allotting: Task.ID?
+    let onAllot: (Task) -> Void
+    let onAct: () -> Void
 
-    @Binding var allotting: Task.ID?
     @Binding var justCompleted: Set<Task.ID>
 
     @State private var dragging: Task.ID?
@@ -223,6 +272,7 @@ struct TodayCards: View {
 
     private func completion(_ task: Task) -> some View {
         Button {
+            onAct()
             complete(task)
         } label: {
             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
@@ -241,7 +291,7 @@ struct TodayCards: View {
                 .foregroundStyle(sessions.isRunning ? Color.white : Color.white.opacity(0.5))
         } else {
             Button {
-                openAllotting(task)
+                onAllot(task)
             } label: {
                 HStack(spacing: 3) {
                     Image(systemName: "timer")
@@ -262,6 +312,7 @@ struct TodayCards: View {
 
     private func starter(_ task: Task) -> some View {
         Button {
+            onAct()
             begin(task)
         } label: {
             Image(systemName: pausing(task) ? "pause.fill" : "play.fill")
@@ -310,11 +361,6 @@ struct TodayCards: View {
     private func complete(_ task: Task) {
         justCompleted.insert(task.id)
         tasks.complete(task, on: day)
-    }
-
-    private func openAllotting(_ task: Task) {
-        allotting = allotting == task.id ? nil : task.id
-        model.allottingChanged(isAllotting: allotting != nil)
     }
 
     private func settle(_ task: Task) {
