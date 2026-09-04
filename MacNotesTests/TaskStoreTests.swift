@@ -317,6 +317,20 @@ final class TaskStoreOrderTests {
         #expect(tasks.onTheDay(today).map(\.title) == ["First", "Second"])
     }
 
+    @Test func theLastOfFourReachesTheFrontInOneMove() {
+        let tasks = store([
+            Task(title: "First", day: today),
+            Task(title: "Second", day: today),
+            Task(title: "Third", day: today),
+            Task(title: "Fourth", day: today),
+        ])
+
+        tasks.move(within: tasks.onTheDay(today), from: 3, to: 0)
+
+        #expect(
+            tasks.onTheDay(today).map(\.title) == ["Fourth", "First", "Second", "Third"])
+    }
+
     @Test func anAllottedTimeIsKeptAgainstTheTask() {
         let task = Task(title: "Book the flight", day: today)
         let tasks = store([task])

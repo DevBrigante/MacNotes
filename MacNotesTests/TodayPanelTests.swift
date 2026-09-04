@@ -33,7 +33,7 @@ final class TodayPanelTests {
         TodayCards(
             model: NotchPanelModel(), tasks: tasks, sessions: idle(),
             listed: tasks.listing(on: .today(), keeping: []), day: .today(),
-            accent: .blue, allotting: nil, onAllot: { _ in }, onAct: {},
+            accent: .blue, allotting: nil, onAllot: { _ in }, onAct: {}, scroller: nil,
             justCompleted: .constant([]))
     }
 
@@ -102,5 +102,38 @@ final class TodayPanelTests {
 
         #expect(tasks.listing(on: .today(), keeping: []).map(\.title) == ["Book the flight"])
         #expect(tasks.task(done.id)?.isCompleted == true)
+    }
+}
+
+struct TodayCardsDragTests {
+    private let stride = TodayPanel.cardStride
+
+    @Test func aCardsHomeIsTheCentreOfItsSlot() {
+        #expect(TodayCards.home(of: 0) == TodayPanel.cardInset + TodayPanel.cardHeight / 2)
+        #expect(TodayCards.home(of: 3) == TodayCards.home(of: 0) + 3 * stride)
+    }
+
+    @Test func theCursorLandsOnTheCardItIsOver() {
+        #expect(TodayCards.landing(of: TodayCards.home(of: 0), among: 4) == 0)
+        #expect(TodayCards.landing(of: TodayCards.home(of: 1), among: 4) == 1)
+        #expect(TodayCards.landing(of: TodayCards.home(of: 3), among: 4) == 3)
+    }
+
+    @Test func theLastCardCanReachTheFirstSlot() {
+        #expect(TodayCards.landing(of: TodayCards.home(of: 0), among: 4) == 0)
+        #expect(TodayCards.landing(of: 0, among: 4) == 0)
+        #expect(TodayCards.landing(of: -500, among: 4) == 0)
+    }
+
+    @Test func theCursorNeverLandsPastEitherEnd() {
+        #expect(TodayCards.landing(of: 5000, among: 4) == 3)
+        #expect(TodayCards.landing(of: -5000, among: 4) == 0)
+        #expect(TodayCards.landing(of: 5000, among: 1) == 0)
+        #expect(TodayCards.landing(of: 5000, among: 0) == 0)
+    }
+
+    @Test func aCardLiftedToItsOwnHomeDoesNotMove() {
+        #expect(TodayCards.landing(of: TodayCards.home(of: 2) + 1, among: 4) == 2)
+        #expect(TodayCards.landing(of: TodayCards.home(of: 2) - 1, among: 4) == 2)
     }
 }

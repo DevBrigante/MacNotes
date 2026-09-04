@@ -4,6 +4,9 @@ import SwiftUI
 struct TodayPanel: View {
     static let cardHeight: CGFloat = 30
     static let cardGap: CGFloat = 6
+    static let cardStride: CGFloat = cardHeight + cardGap
+    static let cardInset: CGFloat = 2
+    static let cardSpace = "TodayCards"
 
     let model: NotchPanelModel
     let tasks: TaskStore
@@ -76,11 +79,15 @@ struct TodayPanel: View {
         if listed.isEmpty {
             nothingForToday
         } else {
-            ScrollView {
-                TodayCards(
-                    model: model, tasks: tasks, sessions: sessions, listed: listed, day: day,
-                    accent: accent, allotting: allotting, onAllot: toggleAllotting,
-                    onAct: giveUpWhatWasOpen, justCompleted: $justCompleted)
+            ScrollViewReader { scroller in
+                ScrollView {
+                    TodayCards(
+                        model: model, tasks: tasks, sessions: sessions, listed: listed, day: day,
+                        accent: accent, allotting: allotting, onAllot: toggleAllotting,
+                        onAct: giveUpWhatWasOpen, scroller: scroller,
+                        justCompleted: $justCompleted)
+                    .coordinateSpace(.named(Self.cardSpace))
+                }
             }
             .scrollIndicators(.never)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -233,6 +240,7 @@ struct TodayCards: View {
     let allotting: Task.ID?
     let onAllot: (Task) -> Void
     let onAct: () -> Void
+    var scroller: ScrollViewProxy?
 
     @Binding var justCompleted: Set<Task.ID>
 
@@ -243,7 +251,7 @@ struct TodayCards: View {
         VStack(spacing: TodayPanel.cardGap) {
             ForEach(listed) { card($0) }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, TodayPanel.cardInset)
     }
 
     private func card(_ task: Task) -> some View {
@@ -266,6 +274,7 @@ struct TodayCards: View {
         .frame(height: TodayPanel.cardHeight)
         .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
         .padding(.horizontal, 10)
+        .id(task.id)
         .offset(y: dragging == task.id ? carried : 0)
         .zIndex(dragging == task.id ? 1 : 0)
     }
@@ -327,20 +336,26 @@ struct TodayCards: View {
     private func handle(_ task: Task) -> some View {
         Image(systemName: "line.3.horizontal")
             .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(Color.white.opacity(0.3))
+            .foregroundStyle(Color.white.opacity(dragging == task.id ? 0.75 : 0.3))
             .frame(width: 14, height: TodayPanel.cardHeight)
             .contentShape(Rectangle())
             .gesture(
-                DragGesture(minimumDistance: 2)
+                DragGesture(minimumDistance: 2, coordinateSpace: .named(TodayPanel.cardSpace))
                     .onChanged { gesture in
                         if dragging != task.id {
                             dragging = task.id
+                            onAct()
                             model.dragChanged(isDragging: true)
                         }
-                        carried = gesture.translation.height
+                        reorder(task, reaching: gesture.location.y)
+                        carried = lift(task, to: gesture.location.y)
                     }
                     .onEnded { _ in
-                        settle(task)
+                        withAnimation(.easeOut(duration: 0.12)) {
+                            dragging = nil
+                            carried = 0
+                        }
+                        model.dragChanged(isDragging: false)
                     }
             )
     }
@@ -363,16 +378,29 @@ struct TodayCards: View {
         tasks.complete(task, on: day)
     }
 
-    private func settle(_ task: Task) {
-        let travelled = Int((carried / (TodayPanel.cardHeight + TodayPanel.cardGap)).rounded())
-
-        dragging = nil
-        carried = 0
-        model.dragChanged(isDragging: false)
-
+    private func reorder(_ task: Task, reaching y: CGFloat) {
         guard let from = listed.firstIndex(where: { $0.id == task.id }) else { return }
-        let to = min(max(from + travelled, 0), listed.count - 1)
+        let to = TodayCards.landing(of: y, among: listed.count)
+        guard to != from else { return }
 
-        tasks.move(within: listed, from: from, to: to)
+        withAnimation(.easeOut(duration: 0.12)) {
+            tasks.move(within: listed, from: from, to: to)
+        }
+        scroller?.scrollTo(task.id, anchor: .center)
+    }
+
+    private func lift(_ task: Task, to y: CGFloat) -> CGFloat {
+        guard let index = listed.firstIndex(where: { $0.id == task.id }) else { return 0 }
+        return y - TodayCards.home(of: index)
+    }
+
+    static func home(of index: Int) -> CGFloat {
+        TodayPanel.cardInset + CGFloat(index) * TodayPanel.cardStride
+            + TodayPanel.cardHeight / 2
+    }
+
+    static func landing(of y: CGFloat, among count: Int) -> Int {
+        let slot = ((y - TodayPanel.cardInset) / TodayPanel.cardStride).rounded(.down)
+        return min(max(Int(slot), 0), max(count - 1, 0))
     }
 }
