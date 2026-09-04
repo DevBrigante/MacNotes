@@ -106,11 +106,11 @@ final class TodayPanelTests {
 }
 
 struct TodayCardsDragTests {
-    private let stride = TodayPanel.cardStride
+    private let rowStride = TodayPanel.cardStride
 
     @Test func aCardsHomeIsTheCentreOfItsSlot() {
         #expect(TodayCards.home(of: 0) == TodayPanel.cardInset + TodayPanel.cardHeight / 2)
-        #expect(TodayCards.home(of: 3) == TodayCards.home(of: 0) + 3 * stride)
+        #expect(TodayCards.home(of: 3) == TodayCards.home(of: 0) + 3 * rowStride)
     }
 
     @Test func theCursorLandsOnTheCardItIsOver() {
@@ -157,5 +157,43 @@ struct TodayCardsDragTests {
     @Test func nothingWalksBeforeTheListHasBeenMeasured() {
         #expect(TodayCards.walking(at: 0, within: 0) == 0)
         #expect(TodayCards.walking(at: 500, within: 0) == 0)
+    }
+
+    @Test func aCardChangesSlotOnlyOnceItHasTravelledHalfARow() {
+        let half = TodayPanel.cardStride / 2
+
+        #expect(TodayCards.landing(of: TodayCards.home(of: 1) + half - 1, among: 4) == 1)
+        #expect(TodayCards.landing(of: TodayCards.home(of: 1) + half + 1, among: 4) == 2)
+        #expect(TodayCards.landing(of: TodayCards.home(of: 1) - half + 1, among: 4) == 1)
+        #expect(TodayCards.landing(of: TodayCards.home(of: 1) - half - 1, among: 4) == 0)
+    }
+
+    @Test func aCardPickedUpAnywhereOnItsRowStaysWhereItWas() {
+        let today = Day.today()
+        let listed = (0..<4).map { Task(title: "Task \($0)", day: today) }
+        let held = listed[2]
+
+        for grabbed in Swift.stride(from: -TodayPanel.cardHeight / 2, through: TodayPanel.cardHeight / 2, by: 3) {
+            let reached = TodayCards.home(of: 2) + grabbed
+            let grip = TodayCards.grip(holding: held, in: listed, at: reached)
+
+            #expect(TodayCards.landing(of: reached - grip, among: listed.count) == 2)
+        }
+    }
+
+    @Test func aCardHeldByItsEdgeTravelsTheSameDistanceAsOneHeldByItsMiddle() {
+        let today = Day.today()
+        let listed = (0..<4).map { Task(title: "Task \($0)", day: today) }
+        let held = listed[1]
+        let byTheTop = TodayCards.home(of: 1) - TodayPanel.cardHeight / 2
+        let byTheMiddle = TodayCards.home(of: 1)
+
+        let topGrip = TodayCards.grip(holding: held, in: listed, at: byTheTop)
+        let middleGrip = TodayCards.grip(holding: held, in: listed, at: byTheMiddle)
+        let travel = TodayPanel.cardStride
+
+        #expect(
+            TodayCards.landing(of: byTheTop + travel - topGrip, among: 4)
+                == TodayCards.landing(of: byTheMiddle + travel - middleGrip, among: 4))
     }
 }

@@ -262,6 +262,7 @@ struct TodayCards: View {
 
     @State private var dragging: Task.ID?
     @State private var carried: CGFloat = 0
+    @State private var grip: CGFloat = 0
     @State private var walking = 0
 
     var body: some View {
@@ -360,15 +361,17 @@ struct TodayCards: View {
             .gesture(
                 DragGesture(minimumDistance: 2, coordinateSpace: .named(TodayPanel.cardSpace))
                     .onChanged { gesture in
+                        let reached = gesture.location.y - contentTop
                         if dragging != task.id {
                             dragging = task.id
+                            grip = Self.grip(holding: task, in: listed, at: reached)
                             onAct()
                             model.dragChanged(isDragging: true)
                         }
                         walking = Self.walking(at: gesture.location.y, within: viewport)
-                        let reached = gesture.location.y - contentTop
-                        if walking == 0 { reorder(task, reaching: reached) }
-                        carried = lift(task, to: reached)
+                        let centre = reached - grip
+                        if walking == 0 { reorder(task, reaching: centre) }
+                        carried = lift(task, to: centre)
                     }
                     .onEnded { _ in
                         withAnimation(.easeOut(duration: 0.12)) {
@@ -376,6 +379,7 @@ struct TodayCards: View {
                             carried = 0
                         }
                         walking = 0
+                        grip = 0
                         model.dragChanged(isDragging: false)
                     }
             )
@@ -399,20 +403,19 @@ struct TodayCards: View {
         tasks.complete(task, on: day)
     }
 
-    private func reorder(_ task: Task, reaching y: CGFloat) {
+    private func reorder(_ task: Task, reaching centre: CGFloat) {
         guard let from = listed.firstIndex(where: { $0.id == task.id }) else { return }
-        let to = TodayCards.landing(of: y, among: listed.count)
+        let to = TodayCards.landing(of: centre, among: listed.count)
         guard to != from else { return }
 
-        withAnimation(.easeOut(duration: 0.12)) {
+        withAnimation(.easeOut(duration: 0.16)) {
             tasks.move(within: listed, from: from, to: to)
         }
-        scroller?.scrollTo(task.id, anchor: .center)
     }
 
-    private func lift(_ task: Task, to y: CGFloat) -> CGFloat {
+    private func lift(_ task: Task, to centre: CGFloat) -> CGFloat {
         guard let index = listed.firstIndex(where: { $0.id == task.id }) else { return 0 }
-        return y - TodayCards.home(of: index)
+        return centre - TodayCards.home(of: index)
     }
 
     static func home(of index: Int) -> CGFloat {
@@ -420,7 +423,7 @@ struct TodayCards: View {
             + TodayPanel.cardHeight / 2
     }
 
-    static let pace = Timer.publish(every: 0.09, on: .main, in: .common).autoconnect()
+    static let pace = Timer.publish(every: 0.16, on: .main, in: .common).autoconnect()
 
     private func walk() {
         guard let id = dragging, walking != 0 else { return }
@@ -428,7 +431,7 @@ struct TodayCards: View {
         let to = min(max(from + walking, 0), listed.count - 1)
         guard to != from else { return }
 
-        withAnimation(.easeOut(duration: 0.12)) {
+        withAnimation(.easeOut(duration: 0.16)) {
             tasks.move(within: listed, from: from, to: to)
         }
         scroller?.scrollTo(id, anchor: walking < 0 ? .top : .bottom)
@@ -441,9 +444,14 @@ struct TodayCards: View {
         return 0
     }
 
-    static func landing(of y: CGFloat, among count: Int) -> Int {
-        let slot = ((y - TodayPanel.cardInset) / TodayPanel.cardStride).rounded(.down)
+    static func landing(of centre: CGFloat, among count: Int) -> Int {
+        let slot = ((centre - home(of: 0)) / TodayPanel.cardStride).rounded()
         return min(max(Int(slot), 0), max(count - 1, 0))
+    }
+
+    static func grip(holding task: Task, in listed: [Task], at reached: CGFloat) -> CGFloat {
+        guard let index = listed.firstIndex(where: { $0.id == task.id }) else { return 0 }
+        return reached - home(of: index)
     }
 }
 
