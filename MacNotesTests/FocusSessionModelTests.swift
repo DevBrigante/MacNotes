@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 
@@ -10,11 +11,17 @@ private let tick: TimeInterval = 0.05
 @MainActor
 final class FocusSessionModelTests {
     private let stopwatch = Stopwatch()
+    private let workspace = NotificationCenter()
     private let sessions: FocusSessionModel
 
     init() {
         let stopwatch = self.stopwatch
-        sessions = FocusSessionModel(now: { stopwatch.now }, tick: tick)
+        sessions = FocusSessionModel(now: { stopwatch.now }, tick: tick, workspace: workspace)
+    }
+
+    private func closeTheLid() {
+        workspace.post(name: NSWorkspace.willSleepNotification, object: nil)
+        letTheClockRun()
     }
 
     private func letTheClockRun() {
@@ -176,6 +183,44 @@ final class FocusSessionModelTests {
         sessions.resume()
 
         #expect(underway == [true])
+    }
+
+    @Test func theMacGoingToSleepEndsTheSession() {
+        sessions.start(.twentyFiveMinutes, on: task)
+
+        closeTheLid()
+
+        #expect(sessions.session == nil)
+        #expect(sessions.remaining == 0)
+        #expect(sessions.clock == nil)
+    }
+
+    @Test func theMacGoingToSleepEndsAPausedSessionToo() {
+        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.pause()
+
+        closeTheLid()
+
+        #expect(sessions.session == nil)
+    }
+
+    @Test func theMacGoingToSleepSaysTheSessionIsOver() {
+        sessions.start(.twentyFiveMinutes, on: task)
+        var underway: [Bool] = []
+        sessions.sessionIsUnderway = { underway.append($0) }
+
+        closeTheLid()
+
+        #expect(underway == [false])
+    }
+
+    @Test func theMacSleepingWithNoSessionSaysNothing() {
+        var underway: [Bool] = []
+        sessions.sessionIsUnderway = { underway.append($0) }
+
+        closeTheLid()
+
+        #expect(underway.isEmpty)
     }
 
     @Test func askingOfNoSessionAtAllChangesNothing() {
