@@ -31,7 +31,7 @@ An event read from the user's macOS calendars through EventKit, shown alongside 
 _Avoid_: Meeting, appointment, commitment
 
 **Focus Session**:
-A stretch of time, whose duration the user chooses when starting it, dedicated to exactly one Task. Ending a Session does not change its Task; completion is always the user's explicit act. A Session lasts only as long as the machine is awake: a Mac put to sleep ends it, and the next one is started from nothing.
+A stretch of time, whose duration the user chooses when starting it, dedicated to exactly one Task. Ending a Session does not change its Task; completion is always the user's explicit act. A Session lasts only as long as the machine is awake: a Mac that sleeps — lid closed or idle — ends it, and the next one is started from nothing.
 _Avoid_: Timer, pomodoro, sprint, block
 
 **Pause**:
