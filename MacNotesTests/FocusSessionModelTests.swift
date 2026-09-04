@@ -154,6 +154,54 @@ final class FocusSessionModelTests {
         #expect(sessions.isRunning == false)
     }
 
+    @Test func theProgressGrowsAsTheSessionRuns() {
+        sessions.start(.fifteenMinutes, on: task)
+
+        #expect(sessions.progress == 0)
+
+        stopwatch.advance(by: 225)
+        letTheClockRun()
+
+        #expect(sessions.progress == 0.25)
+
+        stopwatch.advance(by: 450)
+        letTheClockRun()
+
+        #expect(sessions.progress == 0.75)
+    }
+
+    @Test func theProgressHoldsStillWhilePaused() {
+        sessions.start(.fifteenMinutes, on: task)
+        stopwatch.advance(by: 450)
+
+        sessions.pause()
+        stopwatch.advance(by: 60 * 60)
+        letTheClockRun()
+
+        #expect(sessions.progress == 0.5)
+    }
+
+    @Test func switchingTaskStartsTheProgressOverFromEmpty() {
+        sessions.start(.fifteenMinutes, on: task)
+        stopwatch.advance(by: 675)
+        letTheClockRun()
+
+        sessions.start(.sixtyMinutes, on: anotherTask)
+
+        #expect(sessions.progress == 0)
+    }
+
+    @Test func thereIsNoProgressWithoutASession() {
+        #expect(sessions.progress == 0)
+
+        sessions.start(.fifteenMinutes, on: task)
+        stopwatch.advance(by: 450)
+        letTheClockRun()
+        sessions.end()
+
+        #expect(sessions.progress == 0)
+    }
+
     @Test func aSessionStartingSaysSo() {
         var underway: [Bool] = []
         sessions.sessionIsUnderway = { underway.append($0) }

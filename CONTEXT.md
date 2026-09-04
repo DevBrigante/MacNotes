@@ -57,7 +57,7 @@ The dot drawn at the centre of a Simulated Notch while the Notch Panel is Hidden
 _Avoid_: Dot, indicator, badge, hint
 
 **Progress Tray**:
-The line tracing the Notch Panel's outline, growing from empty to full as a Focus Session runs. Drawn in the system accent colour, like the Activity Graph.
+The line tracing the Notch Panel's outline, growing from empty to full as a Focus Session runs. Two mirrored halves, one starting at each top corner and running down the side, around the bottom and inward, so the notch interrupts the line instead of being drawn over. Drawn in the system accent colour, like the Activity Graph.
 _Avoid_: Progress bar, timeline, ring
 
 **Hidden**:
