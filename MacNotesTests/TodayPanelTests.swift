@@ -136,4 +136,26 @@ struct TodayCardsDragTests {
         #expect(TodayCards.landing(of: TodayCards.home(of: 2) + 1, among: 4) == 2)
         #expect(TodayCards.landing(of: TodayCards.home(of: 2) - 1, among: 4) == 2)
     }
+
+    @Test func theCursorWalksTheListOnlyFromTheEdgeBands() {
+        let viewport: CGFloat = 92
+
+        #expect(TodayCards.walking(at: 46, within: viewport) == 0)
+        #expect(TodayCards.walking(at: TodayPanel.cardBand + 1, within: viewport) == 0)
+        #expect(TodayCards.walking(at: viewport - TodayPanel.cardBand - 1, within: viewport) == 0)
+    }
+
+    @Test func theTopBandWalksItUpAndTheBottomBandWalksItDown() {
+        let viewport: CGFloat = 92
+
+        #expect(TodayCards.walking(at: 0, within: viewport) == -1)
+        #expect(TodayCards.walking(at: -40, within: viewport) == -1)
+        #expect(TodayCards.walking(at: viewport, within: viewport) == 1)
+        #expect(TodayCards.walking(at: viewport + 40, within: viewport) == 1)
+    }
+
+    @Test func nothingWalksBeforeTheListHasBeenMeasured() {
+        #expect(TodayCards.walking(at: 0, within: 0) == 0)
+        #expect(TodayCards.walking(at: 500, within: 0) == 0)
+    }
 }

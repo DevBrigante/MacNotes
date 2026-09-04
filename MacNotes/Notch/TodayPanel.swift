@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 struct TodayPanel: View {
@@ -7,6 +8,7 @@ struct TodayPanel: View {
     static let cardStride: CGFloat = cardHeight + cardGap
     static let cardInset: CGFloat = 2
     static let cardSpace = "TodayCards"
+    static let cardBand: CGFloat = 24
 
     let model: NotchPanelModel
     let tasks: TaskStore
@@ -17,6 +19,7 @@ struct TodayPanel: View {
     @State private var dragging: Task.ID?
     @State private var carried: CGFloat = 0
     @State private var justCompleted: Set<Task.ID> = []
+    @State private var contentTop: CGFloat = 0
     @State private var accent = SystemAccent.colour()
     @FocusState private var capturing: Bool
 
@@ -80,13 +83,24 @@ struct TodayPanel: View {
             nothingForToday
         } else {
             ScrollViewReader { scroller in
-                ScrollView {
-                    TodayCards(
-                        model: model, tasks: tasks, sessions: sessions, listed: listed, day: day,
-                        accent: accent, allotting: allotting, onAllot: toggleAllotting,
-                        onAct: giveUpWhatWasOpen, scroller: scroller,
-                        justCompleted: $justCompleted)
+                GeometryReader { viewport in
+                    ScrollView {
+                        TodayCards(
+                            model: model, tasks: tasks, sessions: sessions, listed: listed,
+                            day: day, accent: accent, allotting: allotting,
+                            onAllot: toggleAllotting, onAct: giveUpWhatWasOpen,
+                            scroller: scroller, contentTop: contentTop,
+                            viewport: viewport.size.height, justCompleted: $justCompleted)
+                            .background(
+                                GeometryReader { content in
+                                    Color.clear.preference(
+                                        key: CardsTop.self,
+                                        value: content.frame(in: .named(Self.cardSpace)).minY)
+                                }
+                            )
+                    }
                     .coordinateSpace(.named(Self.cardSpace))
+                    .onPreferenceChange(CardsTop.self) { contentTop = $0 }
                 }
             }
             .scrollIndicators(.never)
@@ -241,17 +255,21 @@ struct TodayCards: View {
     let onAllot: (Task) -> Void
     let onAct: () -> Void
     var scroller: ScrollViewProxy?
+    var contentTop: CGFloat = 0
+    var viewport: CGFloat = 0
 
     @Binding var justCompleted: Set<Task.ID>
 
     @State private var dragging: Task.ID?
     @State private var carried: CGFloat = 0
+    @State private var walking = 0
 
     var body: some View {
         VStack(spacing: TodayPanel.cardGap) {
             ForEach(listed) { card($0) }
         }
         .padding(.vertical, TodayPanel.cardInset)
+        .onReceive(TodayCards.pace) { _ in walk() }
     }
 
     private func card(_ task: Task) -> some View {
@@ -347,14 +365,17 @@ struct TodayCards: View {
                             onAct()
                             model.dragChanged(isDragging: true)
                         }
-                        reorder(task, reaching: gesture.location.y)
-                        carried = lift(task, to: gesture.location.y)
+                        walking = Self.walking(at: gesture.location.y, within: viewport)
+                        let reached = gesture.location.y - contentTop
+                        if walking == 0 { reorder(task, reaching: reached) }
+                        carried = lift(task, to: reached)
                     }
                     .onEnded { _ in
                         withAnimation(.easeOut(duration: 0.12)) {
                             dragging = nil
                             carried = 0
                         }
+                        walking = 0
                         model.dragChanged(isDragging: false)
                     }
             )
@@ -399,8 +420,37 @@ struct TodayCards: View {
             + TodayPanel.cardHeight / 2
     }
 
+    static let pace = Timer.publish(every: 0.09, on: .main, in: .common).autoconnect()
+
+    private func walk() {
+        guard let id = dragging, walking != 0 else { return }
+        guard let from = listed.firstIndex(where: { $0.id == id }) else { return }
+        let to = min(max(from + walking, 0), listed.count - 1)
+        guard to != from else { return }
+
+        withAnimation(.easeOut(duration: 0.12)) {
+            tasks.move(within: listed, from: from, to: to)
+        }
+        scroller?.scrollTo(id, anchor: walking < 0 ? .top : .bottom)
+    }
+
+    static func walking(at y: CGFloat, within viewport: CGFloat) -> Int {
+        guard viewport > 0 else { return 0 }
+        if y < TodayPanel.cardBand { return -1 }
+        if y > viewport - TodayPanel.cardBand { return 1 }
+        return 0
+    }
+
     static func landing(of y: CGFloat, among count: Int) -> Int {
         let slot = ((y - TodayPanel.cardInset) / TodayPanel.cardStride).rounded(.down)
         return min(max(Int(slot), 0), max(count - 1, 0))
+    }
+}
+
+nonisolated struct CardsTop: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
