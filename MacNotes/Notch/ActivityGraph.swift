@@ -54,15 +54,7 @@ struct ActivityGraph: View {
     }
 
     private var weeks: [[Day?]] {
-        let days = month.itsMonth()
-        guard let first = days.first else { return [] }
-
-        var slots: [Day?] = Array(repeating: nil, count: first.placeInItsWeek())
-        slots.append(contentsOf: days.map { Optional($0) })
-        while slots.count % 7 != 0 {
-            slots.append(nil)
-        }
-        return stride(from: 0, to: slots.count, by: 7).map { Array(slots[$0..<$0 + 7]) }
+        month.itsMonthInWeeks()
     }
 
     private func fill(_ day: Day?) -> Color {

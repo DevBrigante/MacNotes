@@ -77,6 +77,36 @@ extension Day {
         return range.map { Day(year: year, month: month, day: $0) }
     }
 
+    func itsMonthInWeeks(in calendar: Calendar = .current) -> [[Day?]] {
+        let days = itsMonth(in: calendar)
+        guard let first = days.first else { return [] }
+
+        var slots: [Day?] = Array(repeating: nil, count: first.placeInItsWeek(in: calendar))
+        slots.append(contentsOf: days.map { Optional($0) })
+        while slots.count % 7 != 0 {
+            slots.append(nil)
+        }
+        return stride(from: 0, to: slots.count, by: 7).map { Array(slots[$0..<$0 + 7]) }
+    }
+
+    func stepped(by days: Int, in calendar: Calendar = .current) -> Day {
+        guard let date = date(in: calendar),
+            let stepped = calendar.date(byAdding: .day, value: days, to: date)
+        else { return self }
+        return Day(stepped, in: calendar)
+    }
+
+    var firstOfItsMonth: Day {
+        Day(year: year, month: month, day: 1)
+    }
+
+    func monthStepped(by steps: Int, in calendar: Calendar = .current) -> Day {
+        guard let start = firstOfItsMonth.date(in: calendar),
+            let stepped = calendar.date(byAdding: .month, value: steps, to: start)
+        else { return firstOfItsMonth }
+        return Day(stepped, in: calendar)
+    }
+
     func placeInItsWeek(in calendar: Calendar = .current) -> Int {
         guard let date = date(in: calendar) else { return 0 }
         let weekday = calendar.component(.weekday, from: date)

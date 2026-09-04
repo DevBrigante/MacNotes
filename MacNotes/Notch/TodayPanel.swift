@@ -66,10 +66,18 @@ struct TodayPanel: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.white.opacity(0.6))
             Spacer(minLength: 4)
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.2))
-                .help("The Planner is not built yet")
+            Button {
+                giveUpWhatWasOpen()
+                model.askForThePlanner()
+            } label: {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.55))
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Open the Planner")
         }
         .padding(.horizontal, 12)
         .frame(height: 22)
@@ -341,7 +349,7 @@ struct TodayCards: View {
     private func starter(_ task: Task) -> some View {
         Button {
             onAct()
-            begin(task)
+            sessions.startOrPause(task)
         } label: {
             Image(systemName: pausing(task) ? "pause.fill" : "play.fill")
                 .font(.system(size: 8, weight: .bold))
@@ -388,14 +396,6 @@ struct TodayCards: View {
 
     private func pausing(_ task: Task) -> Bool {
         sessions.session?.task == task.id && sessions.isRunning
-    }
-
-    private func begin(_ task: Task) {
-        guard sessions.session?.task == task.id else {
-            sessions.start(task.allotted, on: task.id)
-            return
-        }
-        if sessions.isRunning { sessions.pause() } else { sessions.resume() }
     }
 
     private func complete(_ task: Task) {

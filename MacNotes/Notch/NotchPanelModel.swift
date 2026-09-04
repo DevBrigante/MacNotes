@@ -7,11 +7,13 @@ final class NotchPanelModel {
     private(set) var isAllotting = false
 
     @ObservationIgnored var layoutChanged: (@MainActor () -> Void)?
+    @ObservationIgnored var plannerAsked: (@MainActor () -> Void)?
 
     @ObservationIgnored private var cursorIsOver = false
     @ObservationIgnored private var captureHasTheKeyboard = false
     @ObservationIgnored private var taskIsBeingDragged = false
     @ObservationIgnored private var sessionIsUnderway = false
+    @ObservationIgnored private var plannerIsOpen = false
 
     func cursorMoved(isOver: Bool) {
         cursorIsOver = isOver
@@ -33,13 +35,25 @@ final class NotchPanelModel {
         settle()
     }
 
+    func askForThePlanner() {
+        plannerAsked?()
+    }
+
+    func plannerChanged(isOpen: Bool) {
+        plannerIsOpen = isOpen
+        settle()
+    }
+
     func sessionChanged(isUnderway: Bool) {
         sessionIsUnderway = isUnderway
         settle()
     }
 
     private func settle() {
-        if cursorIsOver || captureHasTheKeyboard || taskIsBeingDragged || isAllotting {
+        if plannerIsOpen {
+            isAllotting = false
+            state = .hidden
+        } else if cursorIsOver || captureHasTheKeyboard || taskIsBeingDragged || isAllotting {
             state = .expanded
         } else {
             isAllotting = false

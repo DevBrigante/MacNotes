@@ -51,8 +51,14 @@ final class TaskStore {
         scheduleSave()
     }
 
+    func delete(_ id: Task.ID) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        tasks.remove(at: index)
+        scheduleSave()
+    }
+
     @discardableResult
-    func capture(_ title: String, on day: Day) -> Task? {
+    func capture(_ title: String, on day: Day?) -> Task? {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard title.isEmpty == false else { return nil }
 
@@ -67,6 +73,31 @@ final class TaskStore {
         else { return }
 
         tasks[index].complete(on: day)
+        scheduleSave()
+    }
+
+    func undoTheCompletion(of id: Task.ID) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }),
+            tasks[index].isCompleted
+        else { return }
+
+        tasks[index].completedOn = nil
+        scheduleSave()
+    }
+
+    func give(_ day: Day?, to id: Task.ID) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        guard tasks[index].day != day else { return }
+        tasks[index].day = day
+        scheduleSave()
+    }
+
+    func note(_ text: String, on id: Task.ID) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        let written = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let kept = written.isEmpty ? nil : text
+        guard tasks[index].notes != kept else { return }
+        tasks[index].notes = kept
         scheduleSave()
     }
 
@@ -108,14 +139,27 @@ final class TaskStore {
     }
 
     func listing(on day: Day, keeping completed: Set<Task.ID>) -> [Task] {
-        let showing = onTheDay(day).filter {
-            $0.isCompleted == false || completed.contains($0.id)
-        }
-        return showing.filter { $0.isCompleted == false } + showing.filter(\.isCompleted)
+        unfinishedFirst(
+            onTheDay(day).filter { $0.isCompleted == false || completed.contains($0.id) })
+    }
+
+    func plan(on day: Day) -> [Task] {
+        unfinishedFirst(onTheDay(day))
+    }
+
+    func waiting(keeping completed: Set<Task.ID>) -> [Task] {
+        unfinishedFirst(
+            tasks.filter {
+                $0.isUnscheduled && ($0.isCompleted == false || completed.contains($0.id))
+            })
+    }
+
+    private func unfinishedFirst(_ listed: [Task]) -> [Task] {
+        listed.filter { $0.isCompleted == false } + listed.filter(\.isCompleted)
     }
 
     var unscheduled: [Task] {
-        tasks.filter { $0.isUnscheduled && $0.isCompleted == false }
+        waiting(keeping: [])
     }
 
     func save() {

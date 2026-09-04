@@ -14,13 +14,22 @@ struct MacNotesApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let tasks = TaskStore(file: JSONFile(name: "tasks.json"))
+    private let sessions = FocusSessionModel()
     private var notch: NotchWindowController?
+    private var planner: PlannerWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         tasks.load(on: .today())
-        notch = NotchWindowController(tasks: tasks)
+        notch = NotchWindowController(tasks: tasks, sessions: sessions)
+        planner = PlannerWindowController(tasks: tasks, sessions: sessions)
+        showTheOneSurfaceAtATime()
         tasks.corruption.map(announce)
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        planner?.open()
+        return true
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -42,6 +51,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         tasks.save()
+    }
+
+    private func showTheOneSurfaceAtATime() {
+        notch?.model.plannerAsked = { [weak self] in self?.planner?.open() }
+        planner?.openChanged = { [weak self] isOpen in
+            self?.notch?.model.plannerChanged(isOpen: isOpen)
+        }
     }
 
     private func announce(_ corruption: Corruption) {

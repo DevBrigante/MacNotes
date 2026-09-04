@@ -287,6 +287,74 @@ final class FocusSessionModelTests {
 }
 
 @MainActor
+final class FocusSessionControlTests {
+    private let stopwatch = Stopwatch()
+    private let sessions: FocusSessionModel
+
+    init() {
+        let stopwatch = self.stopwatch
+        sessions = FocusSessionModel(
+            now: { stopwatch.now }, tick: tick, workspace: NotificationCenter())
+    }
+
+    @Test func onePressStartsTheSessionAtTheTimeTheTaskCarries() {
+        let waiting = Task(title: "Book the flight", allotted: AllottedTime(minutes: 45))
+
+        sessions.startOrPause(waiting)
+
+        #expect(sessions.session?.task == waiting.id)
+        #expect(sessions.remaining == 45 * 60)
+    }
+
+    @Test func theNextPressOnTheSameTaskPausesAndTheOneAfterResumes() {
+        let waiting = Task(title: "Book the flight")
+
+        sessions.startOrPause(waiting)
+        sessions.startOrPause(waiting)
+
+        #expect(sessions.isRunning == false)
+        #expect(sessions.session?.isPaused == true)
+
+        sessions.startOrPause(waiting)
+
+        #expect(sessions.isRunning)
+    }
+
+    @Test func pressingAnotherTaskMovesTheSessionOntoIt() {
+        let waiting = Task(title: "Book the flight")
+        let other = Task(title: "Renew the passport", allotted: AllottedTime(minutes: 10))
+
+        sessions.startOrPause(waiting)
+        sessions.startOrPause(other)
+
+        #expect(sessions.session?.task == other.id)
+        #expect(sessions.remaining == 10 * 60)
+    }
+
+    @Test func deletingTheTaskUnderTheSessionEndsIt() {
+        let going = Task(title: "Book the flight")
+        var underway: [Bool] = []
+        sessions.startOrPause(going)
+        sessions.sessionIsUnderway = { underway.append($0) }
+
+        sessions.endTheSession(on: going.id)
+
+        #expect(sessions.session == nil)
+        #expect(underway == [false])
+    }
+
+    @Test func deletingAnyOtherTaskLeavesTheSessionRunning() {
+        let running = Task(title: "Book the flight")
+        sessions.startOrPause(running)
+
+        sessions.endTheSession(on: UUID())
+
+        #expect(sessions.session?.task == running.id)
+        #expect(sessions.isRunning)
+    }
+}
+
+@MainActor
 private final class Stopwatch {
     private(set) var now: TimeInterval = 0
 
