@@ -105,7 +105,9 @@ struct NotchPanelViewTests {
     }
 
     private func collapsed() -> NotchPanelModel {
-        NotchPanelModel(state: .collapsed)
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+        return model
     }
 
     private func expanded() -> NotchPanelModel {
