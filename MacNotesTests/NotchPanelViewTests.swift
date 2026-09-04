@@ -6,7 +6,13 @@ import Testing
 @testable import MacNotes
 
 @MainActor
-struct NotchPanelViewTests {
+final class NotchPanelViewTests {
+    private let folder = TemporaryFolder()
+
+    deinit {
+        folder.discard()
+    }
+
     private let physical = NotchMetrics(
         screenFrame: CGRect(x: 0, y: 0, width: 1512, height: 982),
         notchRect: CGRect(x: 656, y: 945, width: 200, height: 37),
@@ -172,11 +178,17 @@ struct NotchPanelViewTests {
         FocusSessionModel(now: { 0 }, tick: 60, workspace: NotificationCenter())
     }
 
-    private func running(_ fraction: Double) -> FocusSessionModel {
+    private func store(_ planned: [Task] = []) -> TaskStore {
+        let store = TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60)
+        planned.forEach(store.add)
+        return store
+    }
+
+    private func running(_ fraction: Double, on task: Task.ID = UUID()) -> FocusSessionModel {
         let clock = Clock()
         let sessions = FocusSessionModel(
             now: { clock.now }, tick: 60, workspace: NotificationCenter())
-        sessions.start(.fifteenMinutes, on: UUID())
+        sessions.start(.fifteenMinutes, on: task)
         clock.now = SessionDuration.fifteenMinutes.seconds * fraction
         sessions.pause()
         return sessions
@@ -197,65 +209,41 @@ struct NotchPanelViewTests {
     private func render(
         _ model: NotchPanelModel,
         on metrics: NotchMetrics,
-        grownTo fraction: CGFloat = 1
-    ) throws -> Pixels {
-        try render(model, on: metrics, sessions: idle(), grownTo: fraction)
-    }
-
-    private func render(
-        _ model: NotchPanelModel,
-        on metrics: NotchMetrics,
-        sessions: FocusSessionModel,
+        sessions: FocusSessionModel? = nil,
+        tasks: TaskStore? = nil,
         grownTo fraction: CGFloat = 1
     ) throws -> Pixels {
         let frame = metrics.panelFrame(for: model.state)
-        let renderer = ImageRenderer(
-            content: NotchPanelView(metrics: metrics, model: model, sessions: sessions)
-                .frame(
-                    width: (frame.width * fraction).rounded(),
-                    height: (frame.height * fraction).rounded())
-        )
-        renderer.scale = 1
-        return try Pixels(try #require(renderer.cgImage))
+        return try Pixels(
+            NotchPanelView(
+                metrics: metrics, model: model, sessions: sessions ?? idle(),
+                tasks: tasks ?? store()),
+            width: (frame.width * fraction).rounded(),
+            height: (frame.height * fraction).rounded())
     }
 
-    private struct Pixels {
-        let width: Int
-        let height: Int
-        private let bytes: [UInt8]
+    @Test func theCollapsedStripWritesTheTaskEitherSideOfTheNotch() throws {
+        let underway = Task(title: "Book the flight", day: .today())
+        let model = collapsed()
+        let pixels = try render(
+            model, on: physical, sessions: running(0.5, on: underway.id),
+            tasks: store([underway]))
+        let gap = physical.notchGap(for: model.state)
 
-        init(_ image: CGImage) throws {
-            width = image.width
-            height = image.height
+        #expect(pixels.written(across: 8...Int(gap.minX) - 8, down: 8...26))
+        #expect(pixels.written(across: Int(gap.maxX) + 8...pixels.width - 14, down: 8...26))
+    }
 
-            var buffer = [UInt8](repeating: 0, count: width * height * 4)
-            let context = try #require(
-                CGContext(
-                    data: &buffer,
-                    width: width,
-                    height: height,
-                    bitsPerComponent: 8,
-                    bytesPerRow: width * 4,
-                    space: CGColorSpaceCreateDeviceRGB(),
-                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-                )
-            )
-            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-            bytes = buffer
-        }
+    @Test func theExpandedStripKeepsTheReadoutOutOfTheMenuBar() throws {
+        let underway = Task(title: "Book the flight", day: .today())
+        let model = expanded()
+        let pixels = try render(
+            model, on: physical, sessions: running(0.5, on: underway.id),
+            tasks: store([underway]))
+        let strip = physical.notchGap(for: model.state)
 
-        func alpha(atX x: CGFloat, y: CGFloat) -> UInt8 {
-            pixel(atX: x, y: y).alpha
-        }
-
-        func pixel(
-            atX x: CGFloat, y: CGFloat
-        ) -> (red: UInt8, green: UInt8, blue: UInt8, alpha: UInt8) {
-            let column = min(max(Int(x), 0), width - 1)
-            let row = min(max(Int(y), 0), height - 1)
-            let start = (row * width + column) * 4
-            return (bytes[start], bytes[start + 1], bytes[start + 2], bytes[start + 3])
-        }
+        #expect(
+            pixels.written(across: 1...pixels.width - 2, down: 1...Int(strip.maxY) - 1) == false)
     }
 }
 

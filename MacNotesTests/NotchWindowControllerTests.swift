@@ -4,21 +4,32 @@ import Testing
 @testable import MacNotes
 
 @MainActor
-struct NotchWindowControllerTests {
+final class NotchWindowControllerTests {
+    private let folder = TemporaryFolder()
+
+    deinit {
+        folder.discard()
+    }
+
+    private func controller() -> NotchWindowController {
+        NotchWindowController(
+            tasks: TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60))
+    }
+
     @Test func theWindowTakesTheFrameTheMetricsAskFor() {
-        let controller = NotchWindowController()
+        let controller = controller()
 
         #expect(controller.panel.frame == controller.intendedFrame)
     }
 
     @Test func theWindowSitsAboveTheMenuBar() {
-        let controller = NotchWindowController()
+        let controller = controller()
 
         #expect(controller.panel.level.rawValue > Int(CGWindowLevelForKey(.mainMenuWindow)))
     }
 
     @Test func aSessionUnderwayCollapsesTheWindowOntoItsStrip() {
-        let controller = NotchWindowController()
+        let controller = controller()
         let hidden = controller.intendedFrame
 
         controller.sessions.start(.twentyFiveMinutes, on: UUID())
@@ -27,7 +38,7 @@ struct NotchWindowControllerTests {
     }
 
     @Test func theWindowGivesTheStripBackWhenTheSessionEnds() {
-        let controller = NotchWindowController()
+        let controller = controller()
         let hidden = controller.intendedFrame
 
         controller.sessions.start(.twentyFiveMinutes, on: UUID())
@@ -37,7 +48,7 @@ struct NotchWindowControllerTests {
     }
 
     @Test func theWindowFollowsThePanelOntoTheCollapsedFrame() {
-        let controller = NotchWindowController()
+        let controller = controller()
 
         controller.sessions.start(.twentyFiveMinutes, on: UUID())
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
@@ -46,10 +57,17 @@ struct NotchWindowControllerTests {
     }
 
     @Test func theWindowLandsOnTheDisplayUnderTheCursor() throws {
-        let controller = NotchWindowController()
+        let controller = controller()
         let screen = try #require(NSScreen.underTheCursor ?? NSScreen.main)
 
         #expect(screen.frame.intersects(controller.panel.frame))
         #expect(controller.panel.frame.maxY == screen.frame.maxY)
+    }
+
+    @Test func theWindowCanTakeTheKeyboardForQuickCapture() {
+        let controller = controller()
+
+        #expect(controller.panel.canBecomeKey)
+        #expect(controller.panel.styleMask.contains(.nonactivatingPanel))
     }
 }

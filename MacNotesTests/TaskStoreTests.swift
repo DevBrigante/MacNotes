@@ -177,4 +177,81 @@ final class TaskStoreTests {
 
         #expect(store.couldNotSave == false)
     }
+
+    @Test func quickCaptureGivesANewTaskTheDayItWasCapturedOn() throws {
+        store.load(on: today)
+
+        let captured = try #require(store.capture("Book the flight", on: today))
+
+        #expect(captured.day == today)
+        #expect(captured.title == "Book the flight")
+        #expect(store.tasks == [captured])
+    }
+
+    @Test func quickCaptureTrimsTheTitleAndRefusesABlankOne() {
+        store.load(on: today)
+
+        #expect(store.capture("  Book the flight  ", on: today)?.title == "Book the flight")
+        #expect(store.capture("   ", on: today) == nil)
+        #expect(store.capture("", on: today) == nil)
+        #expect(store.tasks.count == 1)
+    }
+
+    @Test func completingATaskRecordsTheDayItWasDoneOn() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: yesterday))
+
+        store.complete(store.tasks[0], on: today)
+
+        #expect(store.tasks[0].completedOn == today)
+        #expect(store.tasks[0].day == yesterday)
+    }
+
+    @Test func completingATaskTwiceKeepsTheFirstDay() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+
+        store.complete(store.tasks[0], on: yesterday)
+        store.complete(store.tasks[0], on: today)
+
+        #expect(store.tasks[0].completedOn == yesterday)
+    }
+
+    @Test func aCompletionReachesDiskOnItsOwn() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+        store.complete(store.tasks[0], on: today)
+
+        letTheWritesSettle()
+
+        #expect(onDisk == .value(store.tasks))
+    }
+
+    @Test func theDaysTasksAreTheOnlyOnesItAnswersWith() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+        store.add(Task(title: "Renew the passport", day: tomorrow))
+        store.add(Task(title: "Read the manual"))
+
+        #expect(store.onTheDay(today).map(\.title) == ["Book the flight"])
+    }
+
+    @Test func theDaysTasksKeepTheOrderTheyWereGivenIn() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+        store.add(Task(title: "Renew the passport", day: today))
+        store.complete(store.tasks[0], on: today)
+
+        #expect(store.onTheDay(today).map(\.title) == ["Book the flight", "Renew the passport"])
+    }
+
+    @Test func whatIsUnscheduledIsWorkStillWaitingForADay() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight", day: today))
+        store.add(Task(title: "Read the manual"))
+        store.add(Task(title: "Sharpen the knives"))
+        store.complete(store.tasks[2], on: today)
+
+        #expect(store.unscheduled.map(\.title) == ["Read the manual"])
+    }
 }

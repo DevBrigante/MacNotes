@@ -19,7 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         tasks.load(on: .today())
-        notch = NotchWindowController()
+        notch = NotchWindowController(tasks: tasks)
         tasks.corruption.map(announce)
     }
 

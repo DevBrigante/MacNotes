@@ -19,7 +19,7 @@ The calendar date a Task belongs to. A Task carries a Day or nothing at all; it 
 _Avoid_: Date, due date, deadline, schedule
 
 **Unscheduled**:
-A Task with no Day. A Task whose Day has passed without it being completed becomes Unscheduled again, rather than carrying over or showing as overdue.
+A Task with no Day and no Completion — work still waiting to be given one. A Task whose Day has passed without it being completed becomes Unscheduled again, rather than carrying over or showing as overdue. A Task finished without ever holding a Day is finished rather than waiting, and is not counted among them.
 _Avoid_: Inbox, backlog, someday
 
 **Completion**:
@@ -67,7 +67,7 @@ The Notch Panel's state when no Focus Session is running and the cursor is away,
 The Notch Panel's state with a Focus Session running and the cursor away — the strip flanking the notch, showing the Session's remaining time and its Task.
 
 **Expanded**:
-The Notch Panel's state while the cursor is over it, revealing the fuller interface. Reachable from both Hidden and Collapsed.
+The Notch Panel's state while the cursor is over it, or while quick capture holds the keyboard, revealing the fuller interface: today's Tasks, the field that adds one, and the controls that start, pause and complete. Reachable from both Hidden and Collapsed.
 
 **Planner**:
 The app's window, opened from the Expanded Notch Panel. Owns planning rather than the present: the month, assigning Days, reorganising. Opening it returns the Notch Panel to Hidden.

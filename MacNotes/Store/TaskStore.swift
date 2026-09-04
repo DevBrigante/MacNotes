@@ -51,6 +51,37 @@ final class TaskStore {
         scheduleSave()
     }
 
+    @discardableResult
+    func capture(_ title: String, on day: Day) -> Task? {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard title.isEmpty == false else { return nil }
+
+        let task = Task(title: title, day: day)
+        add(task)
+        return task
+    }
+
+    func complete(_ task: Task, on day: Day) {
+        guard let index = tasks.firstIndex(where: { $0.id == task.id }),
+            tasks[index].isCompleted == false
+        else { return }
+
+        tasks[index].complete(on: day)
+        scheduleSave()
+    }
+
+    func task(_ id: Task.ID) -> Task? {
+        tasks.first { $0.id == id }
+    }
+
+    func onTheDay(_ day: Day) -> [Task] {
+        tasks.filter { $0.day == day }
+    }
+
+    var unscheduled: [Task] {
+        tasks.filter { $0.isUnscheduled && $0.isCompleted == false }
+    }
+
     func save() {
         pendingSave?.invalidate()
         pendingSave = nil

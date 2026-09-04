@@ -7,6 +7,7 @@ final class NotchWindowController {
     let panel = NotchPanel()
     let sessions = FocusSessionModel()
 
+    private let tasks: TaskStore
     private let model = NotchPanelModel()
     private let tracking = NotchTrackingView()
     private let hosting: NSHostingView<NotchPanelView>
@@ -16,10 +17,12 @@ final class NotchWindowController {
     private var observers: [NSObjectProtocol] = []
     private var sampler: Timer?
 
-    init() {
+    init(tasks: TaskStore) {
+        self.tasks = tasks
         metrics = Self.metrics(of: activeDisplay.screen)
         hosting = NSHostingView(
-            rootView: NotchPanelView(metrics: metrics, model: model, sessions: sessions))
+            rootView: NotchPanelView(
+                metrics: metrics, model: model, sessions: sessions, tasks: tasks))
 
         hosting.sizingOptions = []
         hosting.translatesAutoresizingMaskIntoConstraints = false
@@ -71,7 +74,8 @@ final class NotchWindowController {
             activeDisplay = ActiveDisplay()
         }
         metrics = Self.metrics(of: activeDisplay.screen)
-        hosting.rootView = NotchPanelView(metrics: metrics, model: model, sessions: sessions)
+        hosting.rootView = NotchPanelView(
+            metrics: metrics, model: model, sessions: sessions, tasks: tasks)
         place(animated: false)
     }
 
@@ -119,6 +123,7 @@ final class NotchWindowController {
 
     private func place(animated: Bool) {
         let frame = intendedFrame
+        if model.state != .expanded { handBackTheKeyboard() }
         if animated {
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
@@ -129,5 +134,10 @@ final class NotchWindowController {
             panel.setFrame(frame, display: true)
         }
         panel.orderFrontRegardless()
+    }
+
+    private func handBackTheKeyboard() {
+        guard panel.isKeyWindow else { return }
+        panel.orderOut(nil)
     }
 }
