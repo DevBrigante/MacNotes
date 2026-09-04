@@ -1,5 +1,7 @@
 # The Progress Tray grows from both top corners and stops at the notch
 
+_Superseded by [ADR-0015](0015-the-collapsed-panel-hangs-below-the-notch.md), which drops the Collapsed Panel clear of the camera and makes the Tray a single sweep._
+
 The Progress Tray is not one line swept once around the Notch Panel's outline. It is two mirrored halves, each starting at a top corner, running down its side, around the bottom corner and inward, both growing together as the Focus Session runs. Neither half reaches the notch.
 
 ## Considered Options

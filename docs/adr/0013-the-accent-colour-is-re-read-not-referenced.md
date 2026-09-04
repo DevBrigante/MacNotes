@@ -1,6 +1,6 @@
 # The accent colour is re-read, not merely referenced
 
-The Progress Tray is stroked with a concrete colour, resolved from `NSColor.controlAccentColor` and read again whenever AppKit posts `NSColor.systemColorsDidChangeNotification`. It is not stroked with `Color(nsColor: .controlAccentColor)` and left to keep itself current.
+The Progress Tray is stroked with a concrete colour, resolved from `NSColor.controlAccentColor` and read again whenever AppKit posts `NSColor.systemColorsDidChangeNotification`. It is not stroked with `Color(nsColor: .controlAccentColor)` and left to keep itself current. The control that starts a Focus Session takes the same colour through the same re-read, so that the button pressed and the line it sets growing are visibly the same thing.
 
 ## Considered Options
 

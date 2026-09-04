@@ -10,6 +10,8 @@ Becoming key on hover would have been the smaller change and it is the worse one
 
 Holding `Expanded` while the field has focus is the other half of making capture usable. The Panel's state is otherwise a question about where the cursor is, and a cursor that drifts off while someone is still typing would collapse the Panel out from under the words. Focus is a second reason to stay open, so `NotchPanelModel` settles on `Expanded` when either the cursor is over the Panel or capture holds the keyboard.
 
+Two more reasons joined it, and both are the same shape as the first: a gesture the user is in the middle of, which a question about the cursor would answer wrongly. A Task being dragged is one — reordering a list that scrolls means travelling to its edges, and the edge of the list is a few points from the edge of the window. An Allotted Time being set is the other, because the control that sets it grows the Panel to hold itself and a Panel that collapsed mid-choice would take the control with it. `NotchPanelModel` settles on `Expanded` while any of the four holds.
+
 Giving the keyboard back is what makes the arrangement safe. A key window that is no longer on screen — the Panel is `Hidden` inside the notch when nothing is running — would go on swallowing keystrokes with nothing to show for them. No API hands key status to another application, so the Panel orders itself out and immediately front again as it leaves `Expanded`: ordering out resigns key, ordering front puts the strip back where it was.
 
 ## Consequences
