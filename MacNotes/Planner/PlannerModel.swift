@@ -6,18 +6,26 @@ import Observation
 final class PlannerModel {
     var listing: PlannerListing = .day
     var editing: Task.ID?
-    private(set) var justCompleted: Set<Task.ID> = []
     var month: Day
     private(set) var selected: Day
+    private(set) var today: Day
+    private(set) var justCompleted: Set<Task.ID> = []
 
     @ObservationIgnored let tasks: TaskStore
     @ObservationIgnored let sessions: FocusSessionModel
+    @ObservationIgnored private var dayTurned: (any NSObjectProtocol)?
 
     init(tasks: TaskStore, sessions: FocusSessionModel, today: Day = .today()) {
         self.tasks = tasks
         self.sessions = sessions
+        self.today = today
         selected = today
         month = today.firstOfItsMonth
+        watchForTheDayTurning()
+    }
+
+    deinit {
+        dayTurned.map(NotificationCenter.default.removeObserver)
     }
 
     var listed: [Task] {
@@ -35,23 +43,24 @@ final class PlannerModel {
         selected = day
         month = day.firstOfItsMonth
         listing = .day
-    }
-
-    func stepTheMonth(by steps: Int) {
-        month = month.monthStepped(by: steps)
-    }
-
-    func show(_ today: Day = .today()) {
-        pick(today)
         editing = nil
         justCompleted = []
+    }
+
+    func show() {
+        pick(today)
+    }
+
+    func theDayTurned(to today: Day) {
+        self.today = today
+        show()
     }
 
     func capture(_ title: String) {
         tasks.capture(title, on: capturesOn)
     }
 
-    func toggleCompletion(of task: Task, on today: Day = .today()) {
+    func toggleCompletion(of task: Task) {
         if task.isCompleted {
             justCompleted.remove(task.id)
             tasks.undoTheCompletion(of: task.id)
@@ -73,7 +82,11 @@ final class PlannerModel {
         tasks.move(within: listed, from: from, to: landing > from ? landing - 1 : landing)
     }
 
-    func countOn(_ day: Day) -> Int {
-        tasks.onTheDay(day).count
+    private func watchForTheDayTurning() {
+        dayTurned = NotificationCenter.default.addObserver(
+            forName: .NSCalendarDayChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.theDayTurned(to: .today()) }
+        }
     }
 }

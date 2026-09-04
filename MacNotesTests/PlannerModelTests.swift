@@ -64,8 +64,8 @@ final class PlannerModelTests {
         #expect(planner.listing == .day)
     }
 
-    @Test func steppingTheMonthLeavesTheSelectedDayWhereItIs() {
-        planner.stepTheMonth(by: 2)
+    @Test func browsingAnotherMonthLeavesTheSelectedDayWhereItIs() {
+        planner.month = planner.month.monthStepped(by: 2)
 
         #expect(planner.month == Day(year: 2026, month: 11, day: 1))
         #expect(planner.selected == today)
@@ -75,11 +75,28 @@ final class PlannerModelTests {
         planner.pick(Day(year: 2027, month: 3, day: 9))
         planner.editing = UUID()
 
-        planner.show(today)
+        planner.show()
 
         #expect(planner.selected == today)
         #expect(planner.month == Day(year: 2026, month: 9, day: 1))
         #expect(planner.editing == nil)
+    }
+
+    @Test func theDayTurningMovesTheWindowOntoTheNewToday() {
+        planner.theDayTurned(to: tomorrow)
+
+        #expect(planner.today == tomorrow)
+        #expect(planner.selected == tomorrow)
+    }
+
+    @Test func aCompletionMadeHereLandsOnTheDayItWasMadeOn() {
+        let task = Task(title: "Book the flight", day: today)
+        tasks.add(task)
+        planner.theDayTurned(to: tomorrow)
+
+        planner.toggleCompletion(of: task)
+
+        #expect(tasks.task(task.id)?.completedOn == tomorrow)
     }
 
     @Test func captureLandsOnTheDayOnShowAndNowhereAtAllInTheUnscheduled() {
@@ -98,12 +115,12 @@ final class PlannerModelTests {
         tasks.add(task)
         planner.listing = .unscheduled
 
-        planner.toggleCompletion(of: task, on: today)
+        planner.toggleCompletion(of: task)
 
         #expect(tasks.unscheduled.isEmpty)
         #expect(planner.listed.map(\.title) == ["Read the manual"])
 
-        planner.toggleCompletion(of: try #require(tasks.task(task.id)), on: today)
+        planner.toggleCompletion(of: try #require(tasks.task(task.id)))
 
         #expect(tasks.unscheduled.map(\.title) == ["Read the manual"])
     }
@@ -112,24 +129,38 @@ final class PlannerModelTests {
         let task = Task(title: "Read the manual")
         tasks.add(task)
         planner.listing = .unscheduled
-        planner.toggleCompletion(of: task, on: today)
+        planner.toggleCompletion(of: task)
 
-        planner.show(today)
+        planner.show()
         planner.listing = .unscheduled
 
         #expect(planner.listed.isEmpty)
         #expect(tasks.task(task.id)?.isCompleted == true)
     }
 
+    @Test func pickingAnotherDayLetsATickedTaskGoAndClosesAnyNotes() {
+        let task = Task(title: "Read the manual")
+        tasks.add(task)
+        planner.listing = .unscheduled
+        planner.toggleCompletion(of: task)
+        planner.editing = task.id
+
+        planner.pick(tomorrow)
+        planner.listing = .unscheduled
+
+        #expect(planner.listed.isEmpty)
+        #expect(planner.editing == nil)
+    }
+
     @Test func aCompletionCanBeMadeAndTakenBack() throws {
         let task = Task(title: "Book the flight", day: today)
         tasks.add(task)
 
-        planner.toggleCompletion(of: task, on: today)
+        planner.toggleCompletion(of: task)
 
         #expect(tasks.task(task.id)?.completedOn == today)
 
-        planner.toggleCompletion(of: try #require(tasks.task(task.id)), on: today)
+        planner.toggleCompletion(of: try #require(tasks.task(task.id)))
 
         #expect(tasks.task(task.id)?.isCompleted == false)
     }
@@ -190,13 +221,5 @@ final class PlannerModelTests {
         planner.move(IndexSet(integer: 0), to: 2)
 
         #expect(planner.listed.map(\.title) == ["Second", "First", "Third"])
-    }
-
-    @Test func aDayCarryingTasksIsMarkedOnTheCalendar() {
-        tasks.add(Task(title: "Book the flight", day: today))
-        tasks.add(Task(title: "Renew the passport", day: today))
-
-        #expect(planner.countOn(today) == 2)
-        #expect(planner.countOn(tomorrow) == 0)
     }
 }

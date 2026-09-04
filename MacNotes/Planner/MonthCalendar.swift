@@ -4,7 +4,7 @@ struct MonthCalendar: View {
     @Binding var month: Day
     let selected: Day?
     let today: Day
-    let counted: (Day) -> Int
+    let carries: (Day) -> Bool
     let pick: (Day) -> Void
 
     private let cell: CGFloat = 30
@@ -89,7 +89,7 @@ struct MonthCalendar: View {
             Text("\(day.day)")
                 .font(.system(size: 12, weight: day == today ? .bold : .regular))
             Circle()
-                .fill(counted(day) > 0 ? Color.primary.opacity(chosen ? 0.9 : 0.35) : .clear)
+                .fill(carries(day) ? Color.primary.opacity(chosen ? 0.9 : 0.35) : .clear)
                 .frame(width: 3, height: 3)
         }
         .foregroundStyle(chosen ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))

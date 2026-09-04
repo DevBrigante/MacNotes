@@ -139,22 +139,23 @@ final class TaskStore {
     }
 
     func listing(on day: Day, keeping completed: Set<Task.ID>) -> [Task] {
-        let showing = onTheDay(day).filter {
-            $0.isCompleted == false || completed.contains($0.id)
-        }
-        return showing.filter { $0.isCompleted == false } + showing.filter(\.isCompleted)
+        unfinishedFirst(
+            onTheDay(day).filter { $0.isCompleted == false || completed.contains($0.id) })
     }
 
     func plan(on day: Day) -> [Task] {
-        let planned = onTheDay(day)
-        return planned.filter { $0.isCompleted == false } + planned.filter(\.isCompleted)
+        unfinishedFirst(onTheDay(day))
     }
 
     func waiting(keeping completed: Set<Task.ID>) -> [Task] {
-        let showing = tasks.filter {
-            $0.isUnscheduled && ($0.isCompleted == false || completed.contains($0.id))
-        }
-        return showing.filter { $0.isCompleted == false } + showing.filter(\.isCompleted)
+        unfinishedFirst(
+            tasks.filter {
+                $0.isUnscheduled && ($0.isCompleted == false || completed.contains($0.id))
+            })
+    }
+
+    private func unfinishedFirst(_ listed: [Task]) -> [Task] {
+        listed.filter { $0.isCompleted == false } + listed.filter(\.isCompleted)
     }
 
     var unscheduled: [Task] {

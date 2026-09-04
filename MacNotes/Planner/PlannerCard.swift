@@ -3,10 +3,9 @@ import SwiftUI
 struct PlannerCard: View {
     let planner: PlannerModel
     let task: Task
-    let today: Day
 
     @State private var allotting = false
-    @State private var dating = false
+    @State private var givingADay = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -26,15 +25,26 @@ struct PlannerCard: View {
             title
             Spacer(minLength: 8)
             dayChip
-            allowance
-            starter
+            HStack(spacing: 8) {
+                allowance
+                starter
+            }
+            .frame(width: 76, alignment: .trailing)
             remover
+            handle
         }
+    }
+
+    private var handle: some View {
+        Image(systemName: "line.3.horizontal")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.tertiary)
+            .frame(width: 14)
     }
 
     private var completion: some View {
         Button {
-            planner.toggleCompletion(of: task, on: today)
+            planner.toggleCompletion(of: task)
         } label: {
             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 14))
@@ -67,9 +77,9 @@ struct PlannerCard: View {
 
     private var dayChip: some View {
         Button {
-            dating = true
+            givingADay = true
         } label: {
-            Text(Self.dayLabel(for: task.day, on: today))
+            Text(Self.dayLabel(for: task.day, on: planner.today))
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(task.day == nil ? .tertiary : .secondary)
                 .padding(.horizontal, 6)
@@ -77,8 +87,9 @@ struct PlannerCard: View {
                 .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
         }
         .buttonStyle(.plain)
-        .popover(isPresented: $dating, arrowEdge: .bottom) {
-            DayPicker(task: task, today: today, tasks: planner.tasks, showing: $dating)
+        .popover(isPresented: $givingADay, arrowEdge: .bottom) {
+            DayPicker(
+                task: task, today: planner.today, tasks: planner.tasks, showing: $givingADay)
         }
     }
 
@@ -262,7 +273,7 @@ struct DayPicker: View {
                 month: $month,
                 selected: task.day,
                 today: today,
-                counted: { tasks.onTheDay($0).count },
+                carries: { tasks.onTheDay($0).isEmpty == false },
                 pick: { give($0) }
             )
             HStack(spacing: 8) {
