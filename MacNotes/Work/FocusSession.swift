@@ -48,8 +48,6 @@ extension FocusSession {
     private static let origin = ContinuousClock.now
 
     static var now: TimeInterval {
-        let elapsed = ContinuousClock.now - origin
-        return TimeInterval(elapsed.components.seconds)
-            + TimeInterval(elapsed.components.attoseconds) * 1e-18
+        (ContinuousClock.now - origin) / .seconds(1)
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated enum SessionDuration: Int, CaseIterable, Codable, Sendable {
+nonisolated enum SessionDuration: Int, CaseIterable, Sendable {
     case fifteenMinutes = 15
     case twentyFiveMinutes = 25
     case fortyFiveMinutes = 45

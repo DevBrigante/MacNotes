@@ -11,3 +11,5 @@ Splitting into three files is deliberate: a parse failure in one must not cost t
 ## Consequences
 
 Schema migrations are hand-written. This is the real cost, and it is paid in full the first time the Task shape changes.
+
+Amended by ADR-0011: there is no `sessions.json`. A Focus Session is never written down, so the split is `tasks.json` and `settings.json`, and the guarantee above is about those two.

@@ -17,6 +17,34 @@ struct NotchWindowControllerTests {
         #expect(controller.panel.level.rawValue > Int(CGWindowLevelForKey(.mainMenuWindow)))
     }
 
+    @Test func aSessionUnderwayCollapsesTheWindowOntoItsStrip() {
+        let controller = NotchWindowController()
+        let hidden = controller.intendedFrame
+
+        controller.sessions.start(.twentyFiveMinutes, on: UUID())
+
+        #expect(controller.intendedFrame.width > hidden.width)
+    }
+
+    @Test func theWindowGivesTheStripBackWhenTheSessionEnds() {
+        let controller = NotchWindowController()
+        let hidden = controller.intendedFrame
+
+        controller.sessions.start(.twentyFiveMinutes, on: UUID())
+        controller.sessions.end()
+
+        #expect(controller.intendedFrame == hidden)
+    }
+
+    @Test func theWindowFollowsThePanelOntoTheCollapsedFrame() {
+        let controller = NotchWindowController()
+
+        controller.sessions.start(.twentyFiveMinutes, on: UUID())
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
+
+        #expect(controller.panel.frame == controller.intendedFrame)
+    }
+
     @Test func theWindowLandsOnTheDisplayUnderTheCursor() throws {
         let controller = NotchWindowController()
         let screen = try #require(NSScreen.underTheCursor ?? NSScreen.main)

@@ -139,7 +139,49 @@ final class FocusSessionModelTests {
         #expect(sessions.clock == nil)
     }
 
+    @Test func aSessionIsNoLongerRunningTheMomentItsTimeIsUp() {
+        sessions.start(.fifteenMinutes, on: task)
+
+        stopwatch.advance(by: 15 * 60)
+
+        #expect(sessions.isRunning == false)
+    }
+
+    @Test func aSessionStartingSaysSo() {
+        var underway: [Bool] = []
+        sessions.sessionIsUnderway = { underway.append($0) }
+
+        sessions.start(.twentyFiveMinutes, on: task)
+
+        #expect(underway == [true])
+    }
+
+    @Test func aSessionRunningOutSaysSo() {
+        sessions.start(.fifteenMinutes, on: task)
+        var underway: [Bool] = []
+        sessions.sessionIsUnderway = { underway.append($0) }
+
+        stopwatch.advance(by: 15 * 60)
+        letTheClockRun()
+
+        #expect(underway == [false])
+    }
+
+    @Test func aPausedSessionIsStillUnderway() {
+        var underway: [Bool] = []
+        sessions.sessionIsUnderway = { underway.append($0) }
+
+        sessions.start(.twentyFiveMinutes, on: task)
+        sessions.pause()
+        sessions.resume()
+
+        #expect(underway == [true])
+    }
+
     @Test func askingOfNoSessionAtAllChangesNothing() {
+        var underway: [Bool] = []
+        sessions.sessionIsUnderway = { underway.append($0) }
+
         sessions.pause()
         sessions.resume()
         sessions.end()
@@ -147,6 +189,7 @@ final class FocusSessionModelTests {
         #expect(sessions.session == nil)
         #expect(sessions.remaining == 0)
         #expect(sessions.clock == nil)
+        #expect(underway.isEmpty)
     }
 }
 

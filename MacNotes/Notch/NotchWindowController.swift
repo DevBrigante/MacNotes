@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 final class NotchWindowController {
     let panel = NotchPanel()
+    let sessions = FocusSessionModel()
 
     private let model = NotchPanelModel()
     private let tracking = NotchTrackingView()
@@ -31,6 +32,7 @@ final class NotchWindowController {
         panel.contentView = tracking
 
         watchTheCursor()
+        watchTheSession()
         followTheCursorAcrossDisplays()
         watchTheDisplays()
         place(animated: false)
@@ -75,11 +77,22 @@ final class NotchWindowController {
     private func watchTheCursor() {
         tracking.cursorIsOver = { [weak self] isOver in
             guard let self else { return }
-            let previous = model.state
-            model.cursorMoved(isOver: isOver)
-            guard model.state != previous else { return }
-            place(animated: true)
+            settle { self.model.cursorMoved(isOver: isOver) }
         }
+    }
+
+    private func watchTheSession() {
+        sessions.sessionIsUnderway = { [weak self] isUnderway in
+            guard let self else { return }
+            settle { self.model.sessionChanged(isUnderway: isUnderway) }
+        }
+    }
+
+    private func settle(_ change: () -> Void) {
+        let previous = model.state
+        change()
+        guard model.state != previous else { return }
+        place(animated: true)
     }
 
     private func followTheCursorAcrossDisplays() {
