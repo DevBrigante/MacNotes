@@ -23,6 +23,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         tasks.corruption.map(announce)
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        tasks.save()
+        guard tasks.couldNotSave else { return .terminateNow }
+
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = "MacNotes could not save your Tasks"
+        alert.informativeText = """
+            Everything since the last save is still only in memory, and quitting now loses it.
+            """
+        alert.addButton(withTitle: "Quit Anyway")
+        alert.addButton(withTitle: "Stay Open")
+
+        NSApp.activate()
+        return alert.runModal() == .alertFirstButtonReturn ? .terminateNow : .terminateCancel
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         tasks.save()
     }
@@ -43,8 +60,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func whatBecameOfIt(_ corruption: Corruption) -> String {
         guard let setAside = corruption.setAside else {
             return """
-                It was left exactly as it is, and MacNotes will not write to it until you move it \
-                out of the way.
+                It was left exactly as it is, and MacNotes cannot write that file until you move \
+                it out of the way yourself.
                 """
         }
         return """

@@ -9,14 +9,6 @@ nonisolated struct JSONFile<Value: Codable & Sendable>: Sendable {
 
     let url: URL
 
-    init(url: URL) {
-        self.url = url
-    }
-
-    init(name: String, in folder: URL = .macNotesStore) {
-        self.init(url: folder.appending(path: name))
-    }
-
     func read(on day: Day) -> Reading {
         guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) else {
             return .blank
@@ -42,14 +34,23 @@ nonisolated struct JSONFile<Value: Codable & Sendable>: Sendable {
         let folder = url.deletingLastPathComponent()
         let stem = "\(url.deletingPathExtension().lastPathComponent).corrupt-\(day.text)"
 
-        for attempt in 1...99 {
+        var attempt = 1
+        while true {
             let name = attempt == 1 ? "\(stem).json" : "\(stem)-\(attempt).json"
             let destination = folder.appending(path: name)
+            attempt += 1
+
             if manager.fileExists(atPath: destination.path(percentEncoded: false)) { continue }
             guard (try? manager.moveItem(at: url, to: destination)) != nil else { break }
             return Corruption(file: url.lastPathComponent, setAside: name)
         }
         return Corruption(file: url.lastPathComponent, setAside: nil)
+    }
+}
+
+extension JSONFile {
+    init(name: String, in folder: URL = .macNotesStore) {
+        self.init(url: folder.appending(path: name))
     }
 }
 

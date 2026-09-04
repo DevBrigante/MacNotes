@@ -157,4 +157,24 @@ final class TaskStoreTests {
         #expect(store.corruption == Corruption(file: "tasks.json", setAside: nil))
         #expect(folder.text(of: "tasks.json") == "{ this was never JSON")
     }
+
+    @Test func saysSoRatherThanLosingAWriteQuietly() {
+        folder.plant("{ this was never JSON", as: "tasks.json")
+        folder.lockAgainstWriting()
+
+        store.load(on: today)
+        store.add(Task(title: "Book the flight"))
+        store.save()
+
+        #expect(store.couldNotSave)
+    }
+
+    @Test func aWriteThatLandsClearsTheAlarm() {
+        store.load(on: today)
+        store.add(Task(title: "Book the flight"))
+
+        store.save()
+
+        #expect(store.couldNotSave == false)
+    }
 }

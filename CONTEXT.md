@@ -22,6 +22,10 @@ _Avoid_: Date, due date, deadline, schedule
 A Task with no Day. A Task whose Day has passed without it being completed becomes Unscheduled again, rather than carrying over or showing as overdue.
 _Avoid_: Inbox, backlog, someday
 
+**Completion**:
+The Day a Task was finished on, and the only record that it was finished at all — a Task is done or not by whether it carries one. Always the user's explicit act, never something the app infers, and what exempts a Task from giving up a Day that has passed.
+_Avoid_: Done flag, checked off, archived, closed
+
 **Calendar Event**:
 An event read from the user's macOS calendars through EventKit, shown alongside a Day for context. MacNotes only ever reads them, and nothing in the app depends on them — denying calendar access costs the user this view and nothing else.
 _Avoid_: Meeting, appointment, commitment

@@ -6,6 +6,7 @@ import Observation
 final class TaskStore {
     private(set) var tasks: [Task] = []
     private(set) var corruption: Corruption?
+    private(set) var couldNotSave = false
 
     @ObservationIgnored private let file: JSONFile<[Task]>
     @ObservationIgnored private let saveDelay: TimeInterval
@@ -24,17 +25,18 @@ final class TaskStore {
     }
 
     func load(on today: Day) {
+        tasks = []
+        corruption = nil
+
         switch file.read(on: today) {
         case .value(let stored):
             tasks = stored
-            corruption = nil
         case .blank:
-            tasks = []
-            corruption = nil
+            break
         case .unreadable(let found):
-            tasks = []
             corruption = found
         }
+
         giveUpPassedDays(on: today)
     }
 
@@ -52,13 +54,13 @@ final class TaskStore {
     func save() {
         pendingSave?.invalidate()
         pendingSave = nil
-        guard mayWrite else { return }
-        try? file.write(tasks)
-    }
 
-    private var mayWrite: Bool {
-        guard let corruption else { return true }
-        return corruption.setAside != nil
+        do {
+            try file.write(tasks)
+            couldNotSave = false
+        } catch {
+            couldNotSave = true
+        }
     }
 
     private func scheduleSave() {
