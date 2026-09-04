@@ -64,3 +64,22 @@ nonisolated struct Day: Codable, Comparable, Hashable, Sendable {
         try container.encode(text)
     }
 }
+
+extension Day {
+    func date(in calendar: Calendar = .current) -> Date? {
+        calendar.date(from: DateComponents(year: year, month: month, day: day))
+    }
+
+    func itsMonth(in calendar: Calendar = .current) -> [Day] {
+        guard let date = date(in: calendar),
+            let range = calendar.range(of: .day, in: .month, for: date)
+        else { return [self] }
+        return range.map { Day(year: year, month: month, day: $0) }
+    }
+
+    func placeInItsWeek(in calendar: Calendar = .current) -> Int {
+        guard let date = date(in: calendar) else { return 0 }
+        let weekday = calendar.component(.weekday, from: date)
+        return (weekday - calendar.firstWeekday + 7) % 7
+    }
+}

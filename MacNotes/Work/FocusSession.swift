@@ -2,14 +2,14 @@ import Foundation
 
 nonisolated struct FocusSession: Equatable, Sendable {
     let task: Task.ID
-    let duration: SessionDuration
+    let allotted: AllottedTime
 
     private var state: State
 
-    init(task: Task.ID, duration: SessionDuration, startedAt now: TimeInterval) {
+    init(task: Task.ID, allotted: AllottedTime, startedAt now: TimeInterval) {
         self.task = task
-        self.duration = duration
-        state = .running(until: now + duration.seconds)
+        self.allotted = allotted
+        state = .running(until: now + allotted.seconds)
     }
 
     var isPaused: Bool {

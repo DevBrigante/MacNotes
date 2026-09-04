@@ -35,6 +35,7 @@ final class NotchWindowController {
         ])
         panel.contentView = tracking
 
+        model.layoutChanged = { [weak self] in self?.placeIfNeeded() }
         watchTheCursor()
         watchTheSession()
         followTheCursorAcrossDisplays()
@@ -81,22 +82,18 @@ final class NotchWindowController {
 
     private func watchTheCursor() {
         tracking.cursorIsOver = { [weak self] isOver in
-            guard let self else { return }
-            settle { self.model.cursorMoved(isOver: isOver) }
+            self?.model.cursorMoved(isOver: isOver)
         }
     }
 
     private func watchTheSession() {
         sessions.sessionIsUnderway = { [weak self] isUnderway in
-            guard let self else { return }
-            settle { self.model.sessionChanged(isUnderway: isUnderway) }
+            self?.model.sessionChanged(isUnderway: isUnderway)
         }
     }
 
-    private func settle(_ change: () -> Void) {
-        let previous = model.state
-        change()
-        guard model.state != previous else { return }
+    private func placeIfNeeded() {
+        guard panel.frame != intendedFrame else { return }
         place(animated: true)
     }
 
@@ -118,7 +115,7 @@ final class NotchWindowController {
     }
 
     var intendedFrame: NSRect {
-        metrics.panelFrame(for: model.state)
+        metrics.panelFrame(for: model.state, allotting: model.isAllotting)
     }
 
     private func place(animated: Bool) {

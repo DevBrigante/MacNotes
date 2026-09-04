@@ -68,11 +68,34 @@ struct NotchMetricsTests {
         #expect(externalDisplay(menuBarHeight: 37).notchRect.height == 37)
     }
 
-    @Test func theSimulatedNotchNeverHangsBelowTheMenuBar() {
+    @Test func hiddenNeverHangsBelowTheMenuBar() {
         let metrics = externalDisplay(menuBarHeight: 24)
 
-        #expect(metrics.panelFrame(for: .collapsed).height == 24)
         #expect(metrics.panelFrame(for: .hidden).height == 24)
+    }
+
+    @Test(arguments: Display.allCases)
+    func collapsedHangsTheSameTenPointsOnEveryDisplay(display: Display) {
+        let metrics = display.metrics
+
+        #expect(
+            metrics.panelFrame(for: .collapsed).height
+                == metrics.notchRect.height + NotchMetrics.Layout.collapsedDrop)
+    }
+
+    @Test func settingAnAllottedTimeGrowsOnlyTheExpandedPanel() {
+        let metrics = builtInDisplay()
+
+        #expect(
+            metrics.panelFrame(for: .expanded, allotting: true).height
+                - metrics.panelFrame(for: .expanded).height
+                == NotchMetrics.Layout.allottingDrop)
+        #expect(
+            metrics.panelFrame(for: .collapsed, allotting: true)
+                == metrics.panelFrame(for: .collapsed))
+        #expect(
+            metrics.panelFrame(for: .hidden, allotting: true)
+                == metrics.panelFrame(for: .hidden))
     }
 
     @Test func measuresTheMenuBarOnTheDisplayItIsGiven() {
@@ -102,7 +125,7 @@ struct NotchMetricsTests {
         let frame = metrics.panelFrame(for: .collapsed)
 
         #expect(frame.width == notchWidth + 2 * NotchMetrics.Layout.collapsedFlank)
-        #expect(frame.height == stripHeight)
+        #expect(frame.height == stripHeight + NotchMetrics.Layout.collapsedDrop)
     }
 
     @Test(arguments: Display.allCases)

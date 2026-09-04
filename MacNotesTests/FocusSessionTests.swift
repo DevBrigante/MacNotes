@@ -8,14 +8,14 @@ private let anotherTask = UUID()
 
 struct FocusSessionTests {
     private func started(
-        _ duration: SessionDuration = .twentyFiveMinutes,
+        _ allotted: AllottedTime = .init(minutes: 25),
         at now: TimeInterval = 0
     ) -> FocusSession {
-        FocusSession(task: task, duration: duration, startedAt: now)
+        FocusSession(task: task, allotted: allotted, startedAt: now)
     }
 
-    @Test func startsWithTheWholeDurationAhead() {
-        let session = started(.fifteenMinutes)
+    @Test func startsWithTheWholeAllottedTimeAhead() {
+        let session = started(.init(minutes: 15))
 
         #expect(session.remaining(at: 0) == 15 * 60)
         #expect(session.hasEnded(at: 0) == false)
@@ -23,27 +23,27 @@ struct FocusSessionTests {
     }
 
     @Test func countsDownAsTimePasses() {
-        let session = started(.twentyFiveMinutes)
+        let session = started(.init(minutes: 25))
 
         #expect(session.remaining(at: 60) == 24 * 60)
         #expect(session.remaining(at: 20 * 60) == 5 * 60)
     }
 
-    @Test func endsWhenTheDurationRunsOut() {
-        let session = started(.fortyFiveMinutes)
+    @Test func endsWhenTheAllottedTimeRunsOut() {
+        let session = started(.init(minutes: 45))
 
         #expect(session.hasEnded(at: 45 * 60 - 1) == false)
         #expect(session.hasEnded(at: 45 * 60))
     }
 
     @Test func neverCountsPastZero() {
-        let session = started(.fifteenMinutes)
+        let session = started(.init(minutes: 15))
 
         #expect(session.remaining(at: 15 * 60 + 3600) == 0)
     }
 
     @Test func aSessionStartedLaterCountsFromThatMoment() {
-        let session = started(.fifteenMinutes, at: 1000)
+        let session = started(.init(minutes: 15), at: 1000)
 
         #expect(session.remaining(at: 1000) == 15 * 60)
         #expect(session.hasEnded(at: 999 + 15 * 60) == false)
@@ -51,7 +51,7 @@ struct FocusSessionTests {
     }
 
     @Test func pausingHoldsTheRemainingTimeStill() {
-        var session = started(.twentyFiveMinutes)
+        var session = started(.init(minutes: 25))
 
         session.pause(at: 5 * 60)
 
@@ -61,7 +61,7 @@ struct FocusSessionTests {
     }
 
     @Test func resumingCarriesOnFromWhereItPaused() {
-        var session = started(.twentyFiveMinutes)
+        var session = started(.init(minutes: 25))
 
         session.pause(at: 5 * 60)
         session.resume(at: 60 * 60)
@@ -72,7 +72,7 @@ struct FocusSessionTests {
     }
 
     @Test func pausingAndResumingRepeatedlyNeitherLosesNorGainsTime() {
-        var session = started(.sixtyMinutes)
+        var session = started(.init(minutes: 60))
         var now: TimeInterval = 0
 
         for _ in 0..<10 {
@@ -87,7 +87,7 @@ struct FocusSessionTests {
     }
 
     @Test func pausingAnAlreadyPausedSessionChangesNothing() {
-        var session = started(.fifteenMinutes)
+        var session = started(.init(minutes: 15))
 
         session.pause(at: 60)
         session.pause(at: 600)
@@ -96,7 +96,7 @@ struct FocusSessionTests {
     }
 
     @Test func resumingASessionThatWasNeverPausedChangesNothing() {
-        var session = started(.fifteenMinutes)
+        var session = started(.init(minutes: 15))
 
         session.resume(at: 600)
 
@@ -104,7 +104,7 @@ struct FocusSessionTests {
     }
 
     @Test func aPausedSessionNeverRunsOutOnItsOwn() {
-        var session = started(.fifteenMinutes)
+        var session = started(.init(minutes: 15))
 
         session.pause(at: 60)
 
@@ -114,11 +114,11 @@ struct FocusSessionTests {
     @Test func aSessionBelongsToOneTask() {
         #expect(started().task == task)
         #expect(
-            FocusSession(task: anotherTask, duration: .fifteenMinutes, startedAt: 0).task
+            FocusSession(task: anotherTask, allotted: .init(minutes: 15), startedAt: 0).task
                 == anotherTask)
     }
 
-    @Test func aSessionKeepsTheDurationItWasStartedWith() {
-        #expect(started(.fortyFiveMinutes).duration == .fortyFiveMinutes)
+    @Test func aSessionKeepsTheAllottedTimeItWasStartedWith() {
+        #expect(started(.init(minutes: 45)).allotted == .init(minutes: 45))
     }
 }

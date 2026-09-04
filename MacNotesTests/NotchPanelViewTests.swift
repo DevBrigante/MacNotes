@@ -25,14 +25,14 @@ final class NotchPanelViewTests {
         hasPhysicalNotch: false
     )
 
-    @Test func nothingIsDrawnOverTheCamera() throws {
+    @Test func theNotchIsPaintedOverEvenWhereItIsPhysical() throws {
         let model = collapsed()
         let pixels = try render(model, on: physical)
         let gap = physical.notchGap(for: model.state)
 
-        #expect(pixels.alpha(atX: gap.midX, y: gap.midY) == 0)
-        #expect(pixels.alpha(atX: gap.minX + 1, y: gap.midY) == 0)
-        #expect(pixels.alpha(atX: gap.maxX - 1, y: gap.midY) == 0)
+        #expect(pixels.alpha(atX: gap.midX, y: gap.midY) == 255)
+        #expect(pixels.alpha(atX: gap.minX + 1, y: gap.midY) == 255)
+        #expect(pixels.alpha(atX: gap.maxX - 1, y: gap.midY) == 255)
     }
 
     @Test func bothFlanksAreDrawnOn() throws {
@@ -54,13 +54,13 @@ final class NotchPanelViewTests {
         }
     }
 
-    @Test func expandedLeavesTheWholeMenuBarStripAlone() throws {
+    @Test func expandedFillsTheWholeMenuBarStrip() throws {
         let model = expanded()
         let pixels = try render(model, on: physical)
         let strip = physical.notchGap(for: model.state)
 
         for x in stride(from: 1.0, to: Double(pixels.width) - 1, by: 4) {
-            #expect(pixels.alpha(atX: x, y: strip.midY) == 0)
+            #expect(pixels.alpha(atX: x, y: strip.midY) == 255)
         }
     }
 
@@ -74,14 +74,14 @@ final class NotchPanelViewTests {
         #expect(pixels.alpha(atX: gap.maxX - 1, y: gap.midY) == 255)
     }
 
-    @Test func expandedKeepsTheSimulatedNotchAndNothingElseInTheStrip() throws {
+    @Test func expandedFillsTheStripOnASimulatedNotchTheSameWay() throws {
         let model = expanded()
         let pixels = try render(model, on: simulated)
         let strip = simulated.notchGap(for: model.state)
 
         #expect(pixels.alpha(atX: strip.midX, y: strip.midY) == 255)
-        #expect(pixels.alpha(atX: strip.minX / 2, y: strip.midY) == 0)
-        #expect(pixels.alpha(atX: (strip.maxX + CGFloat(pixels.width)) / 2, y: strip.midY) == 0)
+        #expect(pixels.alpha(atX: strip.minX / 2, y: strip.midY) == 255)
+        #expect(pixels.alpha(atX: (strip.maxX + CGFloat(pixels.width)) / 2, y: strip.midY) == 255)
     }
 
     @Test func hiddenMarksTheSimulatedNotchAndNothingElse() throws {
@@ -110,34 +110,33 @@ final class NotchPanelViewTests {
         }
     }
 
-    @Test func theTrayGrowsDownBothSidesAndAlongTheBottom() throws {
+    @Test func theTraySweepsDownOneSideAlongTheBottomAndUpTheOther() throws {
         let pixels = try render(collapsed(), on: physical, sessions: running(0.95))
 
-        #expect(accent(pixels, atX: 5, y: 15))
-        #expect(accent(pixels, atX: 339, y: 15))
-        #expect(accent(pixels, atX: 60, y: 32))
-        #expect(accent(pixels, atX: 284, y: 32))
+        #expect(accent(pixels, atX: 5, y: 20))
+        #expect(accent(pixels, atX: 172, y: 42))
+        #expect(accent(pixels, atX: 339, y: 30))
+        #expect(accent(pixels, atX: 339, y: 8) == false)
     }
 
-    @Test func theTrayGrowsFromTheTopDownAndDoesNotDrain() throws {
+    @Test func theTrayGrowsFromTheTopLeftOnwardsAndDoesNotDrain() throws {
         let pixels = try render(collapsed(), on: physical, sessions: running(0.2))
 
-        #expect(accent(pixels, atX: 5, y: 15))
-        #expect(accent(pixels, atX: 339, y: 15))
-        #expect(accent(pixels, atX: 60, y: 32) == false)
-        #expect(accent(pixels, atX: 284, y: 32) == false)
+        #expect(accent(pixels, atX: 5, y: 20))
+        #expect(accent(pixels, atX: 30, y: 42))
+        #expect(accent(pixels, atX: 200, y: 42) == false)
+        #expect(accent(pixels, atX: 339, y: 30) == false)
     }
 
-    @Test func theTrayStopsShortOfTheCamera() throws {
+    @Test func theTrayCrossesBelowTheCameraRatherThanStoppingAtIt() throws {
         let model = collapsed()
-        let pixels = try render(model, on: physical, sessions: running(0.99))
+        let pixels = try render(model, on: physical, sessions: running(0.95))
         let gap = physical.notchGap(for: model.state)
+        let bottom = physical.panelFrame(for: model.state).height - 5
 
-        for y in stride(from: 1.0, to: Double(pixels.height) - 1, by: 2) {
-            #expect(pixels.alpha(atX: gap.minX + 1, y: y) == 0)
-            #expect(pixels.alpha(atX: gap.midX, y: y) == 0)
-            #expect(pixels.alpha(atX: gap.maxX - 1, y: y) == 0)
-        }
+        #expect(accent(pixels, atX: gap.minX + 1, y: bottom))
+        #expect(accent(pixels, atX: gap.midX, y: bottom))
+        #expect(accent(pixels, atX: gap.maxX - 1, y: bottom))
     }
 
     @Test func thereIsNoTrayWithoutASession() throws {
@@ -157,16 +156,12 @@ final class NotchPanelViewTests {
         }
     }
 
-    @Test func theExpandedTrayHangsBelowTheMenuBarStrip() throws {
-        let model = expanded()
-        let pixels = try render(model, on: physical, sessions: running(0.5))
-        let strip = physical.notchGap(for: model.state)
+    @Test func theExpandedTrayTracesTheOutlineBesideTheStripToo() throws {
+        let pixels = try render(expanded(), on: physical, sessions: running(0.5))
 
-        for x in stride(from: 1.0, to: Double(pixels.width) - 1, by: 4) {
-            #expect(pixels.alpha(atX: x, y: strip.midY) == 0)
-        }
+        #expect(accent(pixels, atX: 5, y: 15))
         #expect(accent(pixels, atX: 5, y: 100))
-        #expect(accent(pixels, atX: 459, y: 100))
+        #expect(accent(pixels, atX: 459, y: 100) == false)
     }
 
     private func accent(_ pixels: Pixels, atX x: CGFloat, y: CGFloat) -> Bool {
@@ -188,8 +183,8 @@ final class NotchPanelViewTests {
         let clock = Clock()
         let sessions = FocusSessionModel(
             now: { clock.now }, tick: 60, workspace: NotificationCenter())
-        sessions.start(.fifteenMinutes, on: task)
-        clock.now = SessionDuration.fifteenMinutes.seconds * fraction
+        sessions.start(.init(minutes: 15), on: task)
+        clock.now = AllottedTime(minutes: 15).seconds * fraction
         sessions.pause()
         return sessions
     }
@@ -234,7 +229,7 @@ final class NotchPanelViewTests {
         #expect(pixels.written(across: Int(gap.maxX) + 8...pixels.width - 14, down: 8...26))
     }
 
-    @Test func theExpandedStripKeepsTheReadoutOutOfTheMenuBar() throws {
+    @Test func theExpandedStripIsPlainBlackWithNoReadoutOnIt() throws {
         let underway = Task(title: "Book the flight", day: .today())
         let model = expanded()
         let pixels = try render(
@@ -242,8 +237,11 @@ final class NotchPanelViewTests {
             tasks: store([underway]))
         let strip = physical.notchGap(for: model.state)
 
-        #expect(
-            pixels.written(across: 1...pixels.width - 2, down: 1...Int(strip.maxY) - 1) == false)
+        for x in stride(from: 20.0, to: Double(pixels.width) - 20, by: 4) {
+            let pixel = pixels.pixel(atX: x, y: strip.midY)
+            #expect(pixel.alpha == 255)
+            #expect(pixel.red == 0 && pixel.green == 0 && pixel.blue == 0)
+        }
     }
 }
 

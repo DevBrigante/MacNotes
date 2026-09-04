@@ -5,7 +5,9 @@ nonisolated struct NotchMetrics: Equatable {
     enum Layout {
         static let collapsedFlank: CGFloat = 72
         static let expandedFlank: CGFloat = 132
-        static let expandedDrop: CGFloat = 260
+        static let collapsedDrop: CGFloat = 10
+        static let expandedDrop: CGFloat = 140
+        static let allottingDrop: CGFloat = 64
     }
 
     static let simulatedNotchWidth: CGFloat = 200
@@ -55,9 +57,10 @@ nonisolated struct NotchMetrics: Equatable {
         hasPhysicalNotch == false
     }
 
-    func panelFrame(for state: NotchPanelState) -> CGRect {
+    func panelFrame(for state: NotchPanelState, allotting: Bool = false) -> CGRect {
         let width = (notchRect.width + 2 * flankWidth(for: state)).rounded()
-        let height = (notchRect.height + drop(for: state)).rounded()
+        let allowance = state == .expanded && allotting ? Layout.allottingDrop : 0
+        let height = (notchRect.height + drop(for: state) + allowance).rounded()
         return CGRect(
             x: (notchRect.midX - width / 2).rounded(),
             y: screenFrame.maxY - height,
@@ -66,9 +69,9 @@ nonisolated struct NotchMetrics: Equatable {
         )
     }
 
-    func notchGap(for state: NotchPanelState) -> CGRect {
+    func notchGap(for state: NotchPanelState, allotting: Bool = false) -> CGRect {
         CGRect(
-            x: notchRect.minX - panelFrame(for: state).minX,
+            x: notchRect.minX - panelFrame(for: state, allotting: allotting).minX,
             y: 0,
             width: notchRect.width,
             height: notchRect.height
@@ -84,7 +87,11 @@ nonisolated struct NotchMetrics: Equatable {
     }
 
     private func drop(for state: NotchPanelState) -> CGFloat {
-        state == .expanded ? Layout.expandedDrop : 0
+        switch state {
+        case .hidden: 0
+        case .collapsed: Layout.collapsedDrop
+        case .expanded: Layout.expandedDrop
+        }
     }
 }
 

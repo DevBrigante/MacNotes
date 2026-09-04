@@ -32,7 +32,7 @@ final class NotchWindowControllerTests {
         let controller = controller()
         let hidden = controller.intendedFrame
 
-        controller.sessions.start(.twentyFiveMinutes, on: UUID())
+        controller.sessions.start(.init(minutes: 25), on: UUID())
 
         #expect(controller.intendedFrame.width > hidden.width)
     }
@@ -41,7 +41,7 @@ final class NotchWindowControllerTests {
         let controller = controller()
         let hidden = controller.intendedFrame
 
-        controller.sessions.start(.twentyFiveMinutes, on: UUID())
+        controller.sessions.start(.init(minutes: 25), on: UUID())
         controller.sessions.end()
 
         #expect(controller.intendedFrame == hidden)
@@ -50,7 +50,7 @@ final class NotchWindowControllerTests {
     @Test func theWindowFollowsThePanelOntoTheCollapsedFrame() {
         let controller = controller()
 
-        controller.sessions.start(.twentyFiveMinutes, on: UUID())
+        controller.sessions.start(.init(minutes: 25), on: UUID())
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
 
         #expect(controller.panel.frame == controller.intendedFrame)

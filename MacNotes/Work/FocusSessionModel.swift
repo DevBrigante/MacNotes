@@ -38,12 +38,12 @@ final class FocusSessionModel {
 
     var progress: Double {
         guard let session else { return 0 }
-        return 1 - remaining / session.duration.seconds
+        return 1 - remaining / session.allotted.seconds
     }
 
-    func start(_ duration: SessionDuration, on task: Task.ID) {
-        session = FocusSession(task: task, duration: duration, startedAt: now())
-        remaining = duration.seconds
+    func start(_ allotted: AllottedTime, on task: Task.ID) {
+        session = FocusSession(task: task, allotted: allotted, startedAt: now())
+        remaining = allotted.seconds
         keepTime()
         sessionIsUnderway?(true)
     }

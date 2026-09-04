@@ -8,7 +8,8 @@ import Testing
 final class TodayPanelTests {
     private let folder = TemporaryFolder()
     private let width: CGFloat = 464
-    private let height: CGFloat = 260
+    private let height: CGFloat = 140
+    private let todoWidth: CGFloat = 464 - ActivityGraph.width
 
     deinit {
         folder.discard()
@@ -28,66 +29,77 @@ final class TodayPanelTests {
         TodayPanel(model: NotchPanelModel(), tasks: tasks, sessions: idle())
     }
 
-    private func rows(_ tasks: TaskStore) -> TodayRows {
-        TodayRows(
-            tasks: tasks, sessions: idle(), listed: tasks.onTheDay(.today()), day: .today(),
-            choosing: .constant(nil))
+    private func cards(_ tasks: TaskStore) -> TodayCards {
+        TodayCards(
+            model: NotchPanelModel(), tasks: tasks, sessions: idle(),
+            listed: tasks.listing(on: .today(), keeping: []), day: .today(),
+            accent: .blue, allotting: .constant(nil), justCompleted: .constant([]))
     }
 
-    @Test func theRowsWriteTheTasksTheDayIsCarrying() throws {
+    @Test func theCardsWriteTheTasksTheDayIsCarrying() throws {
         let pixels = try Pixels(
-            rows(store([Task(title: "Book the flight", day: .today())])), width: width)
+            cards(store([Task(title: "Book the flight", day: .today())])), width: todoWidth)
 
-        #expect(pixels.written(across: 1...Int(width) - 2, down: 1...pixels.height - 2))
+        #expect(pixels.written(across: 1...Int(todoWidth) - 2, down: 1...pixels.height - 2))
     }
 
-    @Test func theRowsGrowByOneRowForEachTask() throws {
+    @Test func theCardsGrowByOneForEachTask() throws {
         let one = try Pixels(
-            rows(store([Task(title: "Book the flight", day: .today())])), width: width)
+            cards(store([Task(title: "Book the flight", day: .today())])), width: todoWidth)
         let three = try Pixels(
-            rows(
+            cards(
                 store([
                     Task(title: "Book the flight", day: .today()),
                     Task(title: "Renew the passport", day: .today()),
                     Task(title: "Read the manual", day: .today()),
-                ])), width: width)
+                ])), width: todoWidth)
 
-        #expect(one.height == Int(TodayRows.rowHeight))
-        #expect(three.height == Int(TodayRows.rowHeight) * 3)
+        #expect(one.height == Int(TodayPanel.cardHeight) + 4)
+        #expect(
+            three.height
+                == Int(TodayPanel.cardHeight) * 3 + Int(TodayPanel.cardGap) * 2 + 4)
     }
 
-    @Test func aPanelWithNothingForTodayStillOffersTheAddField() throws {
+    @Test func aPanelWithNothingForTodaySaysSoUnderTheHeading() throws {
         let pixels = try Pixels(panel(store()), width: width, height: height)
 
-        #expect(
-            pixels.written(across: 1...Int(width) - 2, down: Int(height) - 30...Int(height) - 2))
+        #expect(pixels.written(across: 1...Int(todoWidth) - 2, down: 40...100))
     }
 
-    @Test func theEmptyStateCountsWhatIsStillWaitingForADay() throws {
-        let quiet = try Pixels(panel(store()), width: width, height: height)
-        let waiting = try Pixels(
-            panel(
-                store([
-                    Task(title: "Read the manual"),
-                    Task(title: "Sharpen the knives"),
-                ])), width: width, height: height)
-
-        #expect(waiting.writtenRows().count > quiet.writtenRows().count)
-    }
-
-    @Test func aTaskThatBelongsToAnotherDayNeverReachesTheRows() throws {
+    @Test func aTaskThatBelongsToAnotherDayNeverReachesTheCards() throws {
         let elsewhere = Day(year: 2020, month: 1, day: 1)
         let tasks = store([
             Task(title: "Book the flight", day: elsewhere),
             Task(title: "Read the manual"),
         ])
 
-        #expect(tasks.onTheDay(.today()).isEmpty)
+        #expect(tasks.listing(on: .today(), keeping: []).isEmpty)
+    }
 
-        let pixels = try Pixels(panel(tasks), width: width, height: height)
-        let quiet = try Pixels(
-            panel(store([Task(title: "Read the manual")])), width: width, height: height)
+    @Test func theActivityColumnIsHeadedBesideTheList() throws {
+        let pixels = try Pixels(panel(store()), width: width, height: height)
+        let column = Int(width - ActivityGraph.width)
 
-        #expect(pixels.writtenRows() == quiet.writtenRows())
+        #expect(pixels.written(across: column + 2...Int(width) - 2, down: 1...22))
+    }
+
+    @Test func aCompletedTaskDropsToTheFootWhileThePanelIsStillOpen() {
+        let done = Task(title: "Renew the passport", day: .today())
+        let waiting = Task(title: "Book the flight", day: .today())
+        let tasks = store([done, waiting])
+        tasks.complete(done, on: .today())
+
+        let listed = tasks.listing(on: .today(), keeping: [done.id])
+
+        #expect(listed.map(\.title) == ["Book the flight", "Renew the passport"])
+    }
+
+    @Test func aCompletedTaskIsGoneTheNextTimeThePanelOpens() {
+        let done = Task(title: "Renew the passport", day: .today())
+        let tasks = store([done, Task(title: "Book the flight", day: .today())])
+        tasks.complete(done, on: .today())
+
+        #expect(tasks.listing(on: .today(), keeping: []).map(\.title) == ["Book the flight"])
+        #expect(tasks.task(done.id)?.isCompleted == true)
     }
 }

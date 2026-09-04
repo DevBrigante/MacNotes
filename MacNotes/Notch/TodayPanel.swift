@@ -2,38 +2,77 @@ import AppKit
 import SwiftUI
 
 struct TodayPanel: View {
+    static let cardHeight: CGFloat = 30
+    static let cardGap: CGFloat = 6
+
     let model: NotchPanelModel
     let tasks: TaskStore
     let sessions: FocusSessionModel
 
     @State private var draft = ""
-    @State private var choosing: Task.ID?
+    @State private var allotting: Task.ID?
+    @State private var dragging: Task.ID?
+    @State private var carried: CGFloat = 0
+    @State private var justCompleted: Set<Task.ID> = []
+    @State private var accent = SystemAccent.colour()
     @FocusState private var capturing: Bool
 
+    private let day = Day.today()
+
     var body: some View {
-        VStack(spacing: 0) {
-            today
-            Rectangle()
-                .fill(Color.white.opacity(0.12))
-                .frame(height: 1)
-            captureField
+        HStack(spacing: 0) {
+            todo
+            ActivityGraph(tasks: tasks, month: day)
         }
         .foregroundStyle(.white)
+        .onChange(of: model.state) { forgetTheCompleted() }
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSColor.systemColorsDidChangeNotification)
+        ) { _ in
+            accent = SystemAccent.colour()
+        }
+    }
+
+    private var listed: [Task] {
+        tasks.listing(on: day, keeping: justCompleted)
+    }
+
+    private var todo: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            heading
+            cards
+            if let allotting, let task = tasks.task(allotting) {
+                picker(task)
+            }
+            capture
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var heading: some View {
+        HStack(spacing: 0) {
+            Text("To Do")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.6))
+            Spacer(minLength: 4)
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.2))
+                .help("The Planner is not built yet")
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 22)
     }
 
     @ViewBuilder
-    private var today: some View {
-        let day = Day.today()
-        let listed = tasks.onTheDay(day)
+    private var cards: some View {
         if listed.isEmpty {
             nothingForToday
         } else {
             ScrollView {
-                TodayRows(
-                    tasks: tasks, sessions: sessions, listed: listed, day: day,
-                    choosing: $choosing
-                )
-                .padding(.vertical, 4)
+                TodayCards(
+                    model: model, tasks: tasks, sessions: sessions, listed: listed, day: day,
+                    accent: accent, allotting: $allotting, justCompleted: $justCompleted)
             }
             .scrollIndicators(.never)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -41,49 +80,93 @@ struct TodayPanel: View {
     }
 
     private var nothingForToday: some View {
+        Text("Nothing for today")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(Color.white.opacity(0.35))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func picker(_ task: Task) -> some View {
         VStack(spacing: 6) {
-            Text("Nothing for today")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.75))
-            waitingForADay
+            HStack(spacing: 14) {
+                step("minus", on: task, by: -1)
+                VStack(spacing: -1) {
+                    Text("\(task.allotted.minutes)")
+                        .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                    Text("MIN")
+                        .font(.system(size: 7, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.4))
+                }
+                .frame(width: 40)
+                step("plus", on: task, by: 1)
+            }
+            HStack(spacing: 4) {
+                ForEach(AllottedTime.presets, id: \.self) { preset in
+                    preseted(preset, on: task)
+                }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.06))
     }
 
-    @ViewBuilder
-    private var waitingForADay: some View {
-        let waiting = tasks.unscheduled.count
-        if waiting > 0 {
-            Text("\(waiting) Unscheduled")
-                .font(.system(size: 10))
-                .foregroundStyle(Color.white.opacity(0.45))
+    private func step(_ symbol: String, on task: Task, by minutes: Int) -> some View {
+        Button {
+            tasks.allot(task.allotted.stepped(by: minutes), to: task.id)
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.8))
+                .frame(width: 20, height: 20)
+                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 5))
         }
+        .buttonStyle(.plain)
     }
 
-    private var captureField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "plus")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.5))
-            TextField("Add a Task for today", text: $draft)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .focused($capturing)
-                .onSubmit(keep)
-                .onExitCommand(perform: letGo)
+    private func preseted(_ minutes: Int, on task: Task) -> some View {
+        let chosen = task.allotted.minutes == minutes
+        return Button {
+            tasks.allot(AllottedTime(minutes: minutes), to: task.id)
+        } label: {
+            Text("\(minutes)")
+                .font(.system(size: 9, weight: .semibold).monospacedDigit())
+                .foregroundStyle(chosen ? Color.white : Color.white.opacity(0.5))
+                .frame(width: 24, height: 16)
+                .background(
+                    chosen ? accent : Color.white.opacity(0.08),
+                    in: RoundedRectangle(cornerRadius: 4)
+                )
         }
-        .padding(.horizontal, 12)
-        .frame(height: 32)
-        .onChange(of: capturing) { model.captureChanged(hasTheKeyboard: capturing) }
-        .onReceive(
-            NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)
-        ) { _ in
-            letGo()
-        }
+        .buttonStyle(.plain)
+    }
+
+    private var capture: some View {
+        TextField("Add a task", text: $draft)
+            .textFieldStyle(.plain)
+            .font(.system(size: 11))
+            .foregroundStyle(Color.white.opacity(0.85))
+            .focused($capturing)
+            .onSubmit(keep)
+            .onExitCommand(perform: letGo)
+            .padding(.horizontal, 12)
+            .frame(height: 28)
+            .onChange(of: capturing) { model.captureChanged(hasTheKeyboard: capturing) }
+            .onReceive(
+                NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)
+            ) { _ in
+                letGo()
+            }
+    }
+
+    private func forgetTheCompleted() {
+        guard model.state != .expanded else { return }
+        justCompleted = []
+        allotting = nil
     }
 
     private func keep() {
-        tasks.capture(draft, on: .today())
+        tasks.capture(draft, on: day)
         draft = ""
     }
 
@@ -93,101 +176,157 @@ struct TodayPanel: View {
     }
 }
 
-struct TodayRows: View {
-    static let rowHeight: CGFloat = 30
-
+struct TodayCards: View {
+    let model: NotchPanelModel
     let tasks: TaskStore
     let sessions: FocusSessionModel
     let listed: [Task]
     let day: Day
+    let accent: Color
 
-    @Binding var choosing: Task.ID?
+    @Binding var allotting: Task.ID?
+    @Binding var justCompleted: Set<Task.ID>
+
+    @State private var dragging: Task.ID?
+    @State private var carried: CGFloat = 0
 
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(listed) { row($0) }
+        VStack(spacing: TodayPanel.cardGap) {
+            ForEach(listed) { card($0) }
         }
+        .padding(.vertical, 2)
     }
 
-    private func row(_ task: Task) -> some View {
+    private func card(_ task: Task) -> some View {
         HStack(spacing: 8) {
             completion(task)
             Text(task.title)
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .strikethrough(task.isCompleted)
-                .foregroundStyle(task.isCompleted ? Color.white.opacity(0.4) : Color.white)
+                .foregroundStyle(task.isCompleted ? Color.white.opacity(0.35) : Color.white)
             Spacer(minLength: 4)
-            session(task)
+            if task.isCompleted == false {
+                allowance(task)
+                starter(task)
+            }
+            handle(task)
         }
-        .padding(.horizontal, 12)
-        .frame(height: Self.rowHeight)
+        .padding(.horizontal, 10)
+        .frame(height: TodayPanel.cardHeight)
+        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
+        .padding(.horizontal, 10)
+        .offset(y: dragging == task.id ? carried : 0)
+        .zIndex(dragging == task.id ? 1 : 0)
     }
 
     private func completion(_ task: Task) -> some View {
         Button {
-            tasks.complete(task, on: day)
+            complete(task)
         } label: {
             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 13))
-                .foregroundStyle(Color.white.opacity(task.isCompleted ? 0.5 : 0.7))
+                .font(.system(size: 12))
+                .foregroundStyle(Color.white.opacity(task.isCompleted ? 0.4 : 0.6))
         }
         .buttonStyle(.plain)
         .disabled(task.isCompleted)
     }
 
     @ViewBuilder
-    private func session(_ task: Task) -> some View {
-        if task.isCompleted {
-            EmptyView()
-        } else if sessions.session?.task == task.id {
-            underway
-        } else if choosing == task.id {
-            durations(on: task)
+    private func allowance(_ task: Task) -> some View {
+        if sessions.session?.task == task.id {
+            Text(Countdown.text(sessions.remaining))
+                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .foregroundStyle(sessions.isRunning ? Color.white : Color.white.opacity(0.5))
         } else {
             Button {
-                choosing = task.id
+                openAllotting(task)
             } label: {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.white.opacity(0.7))
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private var underway: some View {
-        HStack(spacing: 6) {
-            Text(Countdown.text(sessions.remaining))
-                .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                .foregroundStyle(sessions.isRunning ? Color.white : Color.white.opacity(0.5))
-            Button {
-                if sessions.isRunning { sessions.pause() } else { sessions.resume() }
-            } label: {
-                Image(systemName: sessions.isRunning ? "pause.fill" : "play.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.white.opacity(0.7))
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func durations(on task: Task) -> some View {
-        HStack(spacing: 4) {
-            ForEach(SessionDuration.allCases, id: \.self) { duration in
-                Button {
-                    sessions.start(duration, on: task.id)
-                    choosing = nil
-                } label: {
-                    Text("\(duration.minutes)")
-                        .font(.system(size: 10, weight: .semibold))
-                        .frame(width: 22, height: 18)
-                        .background(
-                            Color.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
+                HStack(spacing: 3) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 8))
+                    Text("\(task.allotted.minutes)")
+                        .font(.system(size: 10, weight: .medium).monospacedDigit())
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 6, weight: .bold))
                 }
-                .buttonStyle(.plain)
+                .foregroundStyle(Color.white.opacity(allotting == task.id ? 0.9 : 0.5))
+                .padding(.horizontal, 5)
+                .frame(height: 17)
+                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
             }
+            .buttonStyle(.plain)
         }
+    }
+
+    private func starter(_ task: Task) -> some View {
+        Button {
+            begin(task)
+        } label: {
+            Image(systemName: pausing(task) ? "pause.fill" : "play.fill")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 18, height: 18)
+                .background(accent, in: Circle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func handle(_ task: Task) -> some View {
+        Image(systemName: "line.3.horizontal")
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(Color.white.opacity(0.3))
+            .frame(width: 14, height: TodayPanel.cardHeight)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 2)
+                    .onChanged { gesture in
+                        if dragging != task.id {
+                            dragging = task.id
+                            model.dragChanged(isDragging: true)
+                        }
+                        carried = gesture.translation.height
+                    }
+                    .onEnded { _ in
+                        settle(task)
+                    }
+            )
+    }
+
+
+    private func pausing(_ task: Task) -> Bool {
+        sessions.session?.task == task.id && sessions.isRunning
+    }
+
+    private func begin(_ task: Task) {
+        guard sessions.session?.task == task.id else {
+            sessions.start(task.allotted, on: task.id)
+            return
+        }
+        if sessions.isRunning { sessions.pause() } else { sessions.resume() }
+    }
+
+    private func complete(_ task: Task) {
+        justCompleted.insert(task.id)
+        tasks.complete(task, on: day)
+    }
+
+    private func openAllotting(_ task: Task) {
+        allotting = allotting == task.id ? nil : task.id
+        model.allottingChanged(isAllotting: allotting != nil)
+    }
+
+    private func settle(_ task: Task) {
+        let travelled = Int((carried / (TodayPanel.cardHeight + TodayPanel.cardGap)).rounded())
+
+        dragging = nil
+        carried = 0
+        model.dragChanged(isDragging: false)
+
+        guard let from = listed.firstIndex(where: { $0.id == task.id }) else { return }
+        let to = min(max(from + travelled, 0), listed.count - 1)
+
+        tasks.move(within: listed, from: from, to: to)
     }
 }
