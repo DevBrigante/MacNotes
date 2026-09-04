@@ -31,11 +31,11 @@ An event read from the user's macOS calendars through EventKit, shown alongside 
 _Avoid_: Meeting, appointment, commitment
 
 **Focus Session**:
-A stretch of time, whose duration the user chooses when starting it, dedicated to exactly one Task. Ending a Session does not change its Task; completion is always the user's explicit act.
+A stretch of time, whose duration the user chooses when starting it, dedicated to exactly one Task. Ending a Session does not change its Task; completion is always the user's explicit act. A Session lasts only as long as the machine is awake: a Mac that sleeps — lid closed or idle — ends it, and the next one is started from nothing.
 _Avoid_: Timer, pomodoro, sprint, block
 
 **Pause**:
-Suspending a running Focus Session, leaving its remaining time untouched so resuming continues from that point. Only the user pauses — the app never infers an interruption — and a Session may be paused and resumed any number of times. Not a rest interval between Sessions; MacNotes has no such concept.
+Suspending a running Focus Session, leaving its remaining time untouched so resuming continues from that point. Only the user pauses — the app never infers an interruption, and a sleeping Mac ends a Session rather than pausing it — and a Session may be paused and resumed any number of times. Not a rest interval between Sessions; MacNotes has no such concept.
 _Avoid_: Break, stop, interrupt
 
 ### Surface
@@ -45,7 +45,7 @@ The app's surface, drawn in the strip of screen around the camera notch, above t
 _Avoid_: Widget, HUD, overlay, island
 
 **Active Display**:
-The display the Notch Panel currently occupies: the one the cursor is on. The Panel follows the cursor across displays, taking a new one only once the cursor has rested there for about a second — so crossing a display on the way to a third never drags the Panel through it.
+The display the Notch Panel currently occupies: the one the cursor is on. The Panel follows the cursor across displays, taking a new one only once the cursor has rested there for about a second — so crossing a display on the way to a third never drags the Panel through it. A display that goes away hands the Panel on at once and without that wait, cursor or no cursor: a lid closed on an external monitor leaves one display, and the Panel takes it.
 _Avoid_: Main screen, primary monitor, current screen
 
 **Simulated Notch**:

@@ -38,4 +38,59 @@ struct NotchPanelModelTests {
             #expect(model.state == .hidden)
         }
     }
+
+    @Test func aSessionUnderwayCollapsesThePanel() {
+        let model = NotchPanelModel()
+
+        model.sessionChanged(isUnderway: true)
+
+        #expect(model.state == .collapsed)
+    }
+
+    @Test func theCursorStillExpandsThePanelOverASession() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+
+        model.cursorMoved(isOver: true)
+
+        #expect(model.state == .expanded)
+    }
+
+    @Test func theCursorLeavingASessionCollapsesRatherThanHides() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+        model.cursorMoved(isOver: true)
+
+        model.cursorMoved(isOver: false)
+
+        #expect(model.state == .collapsed)
+    }
+
+    @Test func theSessionEndingHidesThePanelTheCursorIsAwayFrom() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+
+        model.sessionChanged(isUnderway: false)
+
+        #expect(model.state == .hidden)
+    }
+
+    @Test func theSessionEndingUnderTheCursorLeavesThePanelExpanded() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+        model.sessionChanged(isUnderway: true)
+
+        model.sessionChanged(isUnderway: false)
+
+        #expect(model.state == .expanded)
+    }
+
+    @Test func aSessionStartingUnderTheCursorLeavesThePanelExpanded() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+
+        model.sessionChanged(isUnderway: true)
+
+        #expect(model.state == .expanded)
+    }
 }

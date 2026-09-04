@@ -3,13 +3,26 @@ import Observation
 @MainActor
 @Observable
 final class NotchPanelModel {
-    private(set) var state: NotchPanelState
+    private(set) var state: NotchPanelState = .hidden
 
-    init(state: NotchPanelState = .hidden) {
-        self.state = state
-    }
+    @ObservationIgnored private var cursorIsOver = false
+    @ObservationIgnored private var sessionIsUnderway = false
 
     func cursorMoved(isOver: Bool) {
-        state = isOver ? .expanded : .hidden
+        cursorIsOver = isOver
+        settle()
+    }
+
+    func sessionChanged(isUnderway: Bool) {
+        sessionIsUnderway = isUnderway
+        settle()
+    }
+
+    private func settle() {
+        if cursorIsOver {
+            state = .expanded
+        } else {
+            state = sessionIsUnderway ? .collapsed : .hidden
+        }
     }
 }
