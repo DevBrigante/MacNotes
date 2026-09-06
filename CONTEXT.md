@@ -23,7 +23,7 @@ A Task with no Day and no Completion — work still waiting to be given one. A T
 _Avoid_: Inbox, backlog, someday
 
 **Completion**:
-The Day a Task was finished on, and the only record that it was finished at all — a Task is done or not by whether it carries one. Always the user's explicit act, never something the app infers, and what exempts a Task from giving up a Day that has passed.
+The Day a Task was finished on, and the only record that it was finished at all — a Task is done or not by whether it carries one. Always the user's explicit act, never something the app infers, and what exempts a Task from giving up a Day that has passed. Taken back in the Planner and nowhere else: the Notch Panel opens on hover, and a Completion made by an accidental press there is undone deliberately, in the window.
 _Avoid_: Done flag, checked off, archived, closed
 
 **Calendar Event**:
@@ -78,7 +78,7 @@ The Notch Panel's state with a Focus Session running and the cursor away — one
 The Notch Panel's state while the cursor is over it, while quick capture holds the keyboard, while a Task is being dragged, or while an Allotted Time is being set — one surface growing out of the notch and swallowing it, rather than a second shape hanging below it. It reveals today's Tasks, the field that adds one, the controls that start, pause and complete, and the Activity Graph. Reachable from both Hidden and Collapsed.
 
 **Planner**:
-The app's window, opened from the Expanded Notch Panel. Everything the Notch Panel does, with the room to do it: today's Tasks, quick capture and starting a Focus Session, alongside what the strip has no space for — the month, the Unscheduled, assigning Days, reordering and deleting. Opening it returns the Notch Panel to Hidden, so only one surface shows the present at a time.
+The app's window, opened from the Expanded Notch Panel. Everything the Notch Panel does, with the room to do it: the Tasks of whichever Day is selected, quick capture and starting a Focus Session, alongside what the strip has no space for — the month, the Unscheduled, assigning Days, writing Notes, reordering, taking a Completion back and deleting. It opens on today, and shows a Day at a time or the Unscheduled, never both. Opening it returns the Notch Panel to Hidden, so only one surface shows the present at a time.
 _Avoid_: Main window, dashboard, settings
 
 ### Tracking

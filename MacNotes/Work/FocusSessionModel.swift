@@ -48,6 +48,19 @@ final class FocusSessionModel {
         sessionIsUnderway?(true)
     }
 
+    func startOrPause(_ task: Task) {
+        guard session?.task == task.id else {
+            start(task.allotted, on: task.id)
+            return
+        }
+        if isRunning { pause() } else { resume() }
+    }
+
+    func endTheSession(on id: Task.ID) {
+        guard session?.task == id else { return }
+        end()
+    }
+
     func pause() {
         guard var session, session.isPaused == false else { return }
         session.pause(at: now())

@@ -58,3 +58,60 @@ struct DayTests {
         }
     }
 }
+
+struct DayMonthTests {
+    @Test func stepsToTheFirstOfTheMonthEitherSide() {
+        let september = Day(year: 2026, month: 9, day: 17)
+
+        #expect(september.monthStepped(by: 1, in: calendar) == Day(year: 2026, month: 10, day: 1))
+        #expect(september.monthStepped(by: -1, in: calendar) == Day(year: 2026, month: 8, day: 1))
+    }
+
+    @Test func stepsAcrossTheTurnOfTheYear() {
+        #expect(
+            Day(year: 2026, month: 12, day: 31).monthStepped(by: 1, in: calendar)
+                == Day(year: 2027, month: 1, day: 1))
+        #expect(
+            Day(year: 2026, month: 1, day: 1).monthStepped(by: -1, in: calendar)
+                == Day(year: 2025, month: 12, day: 1))
+    }
+
+    @Test func theLastOfALongMonthStillLandsOnAShortOnesFirst() {
+        #expect(
+            Day(year: 2026, month: 1, day: 31).monthStepped(by: 1, in: calendar)
+                == Day(year: 2026, month: 2, day: 1))
+    }
+
+    @Test func standingStillIsTheFirstOfTheMonthItIsIn() {
+        #expect(
+            Day(year: 2026, month: 9, day: 17).monthStepped(by: 0, in: calendar)
+                == Day(year: 2026, month: 9, day: 1))
+    }
+
+    @Test func stepsADayAtATimeOverTheEndOfAMonth() {
+        #expect(
+            Day(year: 2026, month: 9, day: 30).stepped(by: 1, in: calendar)
+                == Day(year: 2026, month: 10, day: 1))
+        #expect(
+            Day(year: 2026, month: 1, day: 1).stepped(by: -1, in: calendar)
+                == Day(year: 2025, month: 12, day: 31))
+    }
+
+    @Test func laysAMonthOutAsWholeWeeksStartingWhereItFalls() {
+        let weeks = Day(year: 2026, month: 9, day: 17).itsMonthInWeeks(in: calendar)
+
+        #expect(weeks.allSatisfy { $0.count == 7 })
+        #expect(weeks.flatMap { $0 }.compactMap { $0 }.count == 30)
+        #expect(weeks[0].compactMap { $0 }.first == Day(year: 2026, month: 9, day: 1))
+    }
+
+    @Test func theFirstOfTheMonthSitsUnderItsOwnWeekday() {
+        var sunday = calendar
+        sunday.firstWeekday = 1
+        let weeks = Day(year: 2026, month: 9, day: 1).itsMonthInWeeks(in: sunday)
+        let first = Day(year: 2026, month: 9, day: 1)
+
+        #expect(weeks[0][first.placeInItsWeek(in: sunday)] == first)
+        #expect(weeks[0].prefix(first.placeInItsWeek(in: sunday)).allSatisfy { $0 == nil })
+    }
+}

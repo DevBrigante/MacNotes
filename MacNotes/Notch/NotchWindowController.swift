@@ -5,10 +5,10 @@ import SwiftUI
 @MainActor
 final class NotchWindowController {
     let panel = NotchPanel()
-    let sessions = FocusSessionModel()
+    let model = NotchPanelModel()
+    let sessions: FocusSessionModel
 
     private let tasks: TaskStore
-    private let model = NotchPanelModel()
     private let tracking = NotchTrackingView()
     private let hosting: NSHostingView<NotchPanelView>
 
@@ -17,8 +17,9 @@ final class NotchWindowController {
     private var observers: [NSObjectProtocol] = []
     private var sampler: Timer?
 
-    init(tasks: TaskStore) {
+    init(tasks: TaskStore, sessions: FocusSessionModel) {
         self.tasks = tasks
+        self.sessions = sessions
         metrics = Self.metrics(of: activeDisplay.screen)
         hosting = NSHostingView(
             rootView: NotchPanelView(

@@ -156,6 +156,66 @@ struct NotchPanelModelTests {
         #expect(model.state == .hidden)
     }
 
+    @Test func thePlannerOpeningHidesThePanelTheCursorIsSittingOn() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+
+        model.plannerChanged(isOpen: true)
+
+        #expect(model.state == .hidden)
+    }
+
+    @Test func thePlannerOpeningHidesThePanelOverARunningSession() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+
+        model.plannerChanged(isOpen: true)
+
+        #expect(model.state == .hidden)
+    }
+
+    @Test func thePlannerOpeningForgetsThatAnAllottedTimeWasBeingSet() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+        model.allottingChanged(isAllotting: true)
+
+        model.plannerChanged(isOpen: true)
+
+        #expect(model.isAllotting == false)
+        #expect(model.state == .hidden)
+    }
+
+    @Test func thePlannerClosingGivesTheSessionItsStripBack() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+        model.plannerChanged(isOpen: true)
+
+        model.plannerChanged(isOpen: false)
+
+        #expect(model.state == .collapsed)
+    }
+
+    @Test func thePlannerClosingLeavesTheCursorWhereItWas() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+        model.plannerChanged(isOpen: true)
+        model.cursorMoved(isOver: false)
+
+        model.plannerChanged(isOpen: false)
+
+        #expect(model.state == .hidden)
+    }
+
+    @Test func askingForThePlannerReachesWhoeverOpensIt() {
+        let model = NotchPanelModel()
+        var asked = 0
+        model.plannerAsked = { asked += 1 }
+
+        model.askForThePlanner()
+
+        #expect(asked == 1)
+    }
+
     @Test func thePanelClosingForgetsThatAnAllottedTimeWasBeingSet() {
         let model = NotchPanelModel()
         model.cursorMoved(isOver: true)

@@ -355,3 +355,139 @@ final class TaskStoreOrderTests {
         #expect(tasks.completions(on: yesterday) == 0)
     }
 }
+
+@MainActor
+final class TaskStorePlannerTests {
+    private let folder = TemporaryFolder()
+    private let store: TaskStore
+
+    init() {
+        store = TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: saveDelay)
+        store.load(on: today)
+    }
+
+    deinit {
+        folder.discard()
+    }
+
+    private func letTheWritesSettle() {
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: saveDelay * 3))
+    }
+
+    @Test func deletingATaskTakesItOffTheListAndOutOfTheFile() {
+        let going = Task(title: "Book the flight", day: today)
+        store.add(going)
+        store.add(Task(title: "Renew the passport", day: today))
+
+        store.delete(going.id)
+        letTheWritesSettle()
+
+        #expect(store.tasks.map(\.title) == ["Renew the passport"])
+        #expect(
+            JSONFile<[Task]>(name: "tasks.json", in: folder.url).read(on: today)
+                == .value(store.tasks))
+    }
+
+    @Test func deletingATaskThatIsNotThereChangesNothing() {
+        store.add(Task(title: "Book the flight", day: today))
+
+        store.delete(UUID())
+
+        #expect(store.tasks.count == 1)
+    }
+
+    @Test func givingATaskADayTakesItOutOfTheUnscheduled() {
+        let waiting = Task(title: "Read the manual")
+        store.add(waiting)
+
+        store.give(tomorrow, to: waiting.id)
+
+        #expect(store.unscheduled.isEmpty)
+        #expect(store.onTheDay(tomorrow).map(\.title) == ["Read the manual"])
+    }
+
+    @Test func takingTheDayBackLeavesTheTaskWaitingForAnother() {
+        let planned = Task(title: "Book the flight", day: today)
+        store.add(planned)
+
+        store.give(nil, to: planned.id)
+
+        #expect(store.onTheDay(today).isEmpty)
+        #expect(store.unscheduled.map(\.title) == ["Book the flight"])
+    }
+
+    @Test func aTaskKeepsItsNotesAndForgetsAnEmptyOne() {
+        let task = Task(title: "Book the flight", day: today)
+        store.add(task)
+
+        store.note("Aisle seat, no checked bag", on: task.id)
+
+        #expect(store.task(task.id)?.notes == "Aisle seat, no checked bag")
+
+        store.note("   ", on: task.id)
+
+        #expect(store.task(task.id)?.notes == nil)
+    }
+
+    @Test func undoingACompletionLeavesTheTaskWaitingAgain() {
+        let task = Task(title: "Book the flight", day: today)
+        store.add(task)
+        store.complete(task, on: today)
+
+        store.undoTheCompletion(of: task.id)
+
+        #expect(store.task(task.id)?.isCompleted == false)
+        #expect(store.task(task.id)?.day == today)
+    }
+
+    @Test func quickCaptureWithoutADayLandsInTheUnscheduled() throws {
+        let captured = try #require(store.capture("Read the manual", on: nil))
+
+        #expect(captured.day == nil)
+        #expect(store.unscheduled.map(\.title) == ["Read the manual"])
+    }
+
+    @Test func aDaysPlanKeepsTheCompletedTasksTheNotchPanelDrops() {
+        let done = Task(title: "Renew the passport", day: today)
+        store.add(done)
+        store.add(Task(title: "Book the flight", day: today))
+        store.complete(done, on: today)
+
+        #expect(store.listing(on: today, keeping: []).map(\.title) == ["Book the flight"])
+        #expect(store.plan(on: today).map(\.title) == ["Book the flight", "Renew the passport"])
+    }
+
+    @Test func aDaysPlanPutsWhatIsStillWaitingFirst() {
+        let first = Task(title: "First", day: today)
+        let second = Task(title: "Second", day: today)
+        store.add(first)
+        store.add(second)
+        store.add(Task(title: "Third", day: today))
+        store.complete(first, on: today)
+        store.complete(second, on: today)
+
+        #expect(store.plan(on: today).map(\.title) == ["Third", "First", "Second"])
+    }
+
+    @Test func reorderingADaysPlanMovesTheOneSequenceEveryListShares() {
+        let tasks = [
+            Task(title: "First", day: today),
+            Task(title: "Second", day: today),
+            Task(title: "Third", day: today),
+        ]
+        tasks.forEach(store.add)
+
+        store.move(within: store.plan(on: today), from: 2, to: 0)
+
+        #expect(store.plan(on: today).map(\.title) == ["Third", "First", "Second"])
+        #expect(store.listing(on: today, keeping: []).map(\.title) == ["Third", "First", "Second"])
+    }
+
+    @Test func reorderingTheUnscheduledMovesTheSameSequence() {
+        [Task(title: "First"), Task(title: "Second"), Task(title: "Third")].forEach(store.add)
+
+        store.move(within: store.unscheduled, from: 0, to: 2)
+
+        #expect(store.unscheduled.map(\.title) == ["Second", "Third", "First"])
+    }
+}
