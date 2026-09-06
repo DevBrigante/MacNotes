@@ -10,18 +10,24 @@ final class TaskStore {
 
     @ObservationIgnored private let file: JSONFile<[Task]>
     @ObservationIgnored private let saveDelay: TimeInterval
+    @ObservationIgnored private let notices: NotificationCenter
     @ObservationIgnored private var pendingSave: Timer?
     @ObservationIgnored private var dayTurned: (any NSObjectProtocol)?
 
-    init(file: JSONFile<[Task]>, saveDelay: TimeInterval = 1) {
+    init(
+        file: JSONFile<[Task]>,
+        saveDelay: TimeInterval = 1,
+        notices: NotificationCenter = .default
+    ) {
         self.file = file
         self.saveDelay = saveDelay
+        self.notices = notices
         watchForTheDayTurning()
     }
 
     deinit {
         pendingSave?.invalidate()
-        dayTurned.map(NotificationCenter.default.removeObserver)
+        dayTurned.map(notices.removeObserver)
     }
 
     func load(on today: Day) {
@@ -191,7 +197,7 @@ final class TaskStore {
     }
 
     private func watchForTheDayTurning() {
-        dayTurned = NotificationCenter.default.addObserver(
+        dayTurned = notices.addObserver(
             forName: .NSCalendarDayChanged, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.giveUpPassedDays(on: .today()) }

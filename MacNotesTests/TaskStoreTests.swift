@@ -11,10 +11,14 @@ private let saveDelay: TimeInterval = 0.2
 @MainActor
 final class TaskStoreTests {
     private let folder = TemporaryFolder()
+    private let notices = NotificationCenter()
     private let store: TaskStore
 
     init() {
-        store = TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: saveDelay)
+        let notices = self.notices
+        store = TaskStore(
+            file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: saveDelay,
+            notices: notices)
     }
 
     deinit {
@@ -82,7 +86,7 @@ final class TaskStoreTests {
         store.load(on: today)
         store.add(Task(title: "Book the flight", day: Day(year: 2020, month: 1, day: 1)))
 
-        NotificationCenter.default.post(name: .NSCalendarDayChanged, object: nil)
+        notices.post(name: .NSCalendarDayChanged, object: nil)
         letTheWritesSettle()
 
         #expect(store.tasks[0].isUnscheduled)

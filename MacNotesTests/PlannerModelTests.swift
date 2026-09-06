@@ -14,9 +14,12 @@ final class PlannerModelTests {
     private let planner: PlannerModel
 
     init() {
-        tasks = TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60)
+        tasks = TaskStore(
+            file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60,
+            notices: NotificationCenter())
         sessions = FocusSessionModel(now: { 0 }, tick: 60, workspace: NotificationCenter())
-        planner = PlannerModel(tasks: tasks, sessions: sessions, today: today)
+        planner = PlannerModel(
+            tasks: tasks, sessions: sessions, today: today, notices: NotificationCenter())
     }
 
     deinit {
@@ -87,6 +90,23 @@ final class PlannerModelTests {
 
         #expect(planner.today == tomorrow)
         #expect(planner.selected == tomorrow)
+    }
+
+    @Test func theDayTurningReachesTheWindowThroughItsOwnNotices() {
+        let notices = NotificationCenter()
+        let planner = PlannerModel(
+            tasks: tasks, sessions: sessions, today: today, notices: notices)
+
+        notices.post(name: .NSCalendarDayChanged, object: nil)
+
+        #expect(planner.today == .today())
+    }
+
+    @Test func aDayTurningAnnouncedToAnyoneElseLeavesTheWindowWhereItWas() {
+        NotificationCenter.default.post(name: .NSCalendarDayChanged, object: nil)
+
+        #expect(planner.today == today)
+        #expect(planner.selected == today)
     }
 
     @Test func aCompletionMadeHereLandsOnTheDayItWasMadeOn() {
