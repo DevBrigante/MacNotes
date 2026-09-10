@@ -17,12 +17,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let sessions = FocusSessionModel()
     private var notch: NotchWindowController?
     private var planner: PlannerWindowController?
+    private var hotkey: GlobalHotkey?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         tasks.load(on: .today())
         notch = NotchWindowController(tasks: tasks, sessions: sessions)
         planner = PlannerWindowController(tasks: tasks, sessions: sessions)
+        hotkey = GlobalHotkey { [weak self] in
+            guard let self else { return }
+            self.sessions.respondToTheGlobalHotkey(with: self.tasks.tasks, on: .today())
+        }
         showTheOneSurfaceAtATime()
         tasks.corruption.map(announce)
     }
