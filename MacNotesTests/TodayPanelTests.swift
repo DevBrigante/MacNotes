@@ -33,7 +33,8 @@ final class TodayPanelTests {
         TodayCards(
             model: NotchPanelModel(), tasks: tasks, sessions: idle(),
             listed: tasks.listing(on: .today(), keeping: []), day: .today(),
-            accent: .blue, allotting: nil, onAllot: { _ in }, onAct: {}, scroller: nil,
+            accent: .blue, allotting: nil, onAllot: { _ in }, onAct: {},
+            isAllotting: { _ in .constant(false) }, scroller: nil,
             justCompleted: .constant([]))
     }
 

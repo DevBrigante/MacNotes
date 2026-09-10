@@ -13,19 +13,26 @@ final class PlannerModel {
 
     @ObservationIgnored let tasks: TaskStore
     @ObservationIgnored let sessions: FocusSessionModel
+    @ObservationIgnored private let notices: NotificationCenter
     @ObservationIgnored private var dayTurned: (any NSObjectProtocol)?
 
-    init(tasks: TaskStore, sessions: FocusSessionModel, today: Day = .today()) {
+    init(
+        tasks: TaskStore,
+        sessions: FocusSessionModel,
+        today: Day = .today(),
+        notices: NotificationCenter = .default
+    ) {
         self.tasks = tasks
         self.sessions = sessions
         self.today = today
+        self.notices = notices
         selected = today
         month = today.firstOfItsMonth
         watchForTheDayTurning()
     }
 
     deinit {
-        dayTurned.map(NotificationCenter.default.removeObserver)
+        dayTurned.map(notices.removeObserver)
     }
 
     var listed: [Task] {
@@ -83,7 +90,7 @@ final class PlannerModel {
     }
 
     private func watchForTheDayTurning() {
-        dayTurned = NotificationCenter.default.addObserver(
+        dayTurned = notices.addObserver(
             forName: .NSCalendarDayChanged, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.theDayTurned(to: .today()) }

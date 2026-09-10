@@ -57,7 +57,7 @@ extension JSONFile {
 extension JSONFile.Reading: Equatable where Value: Equatable {}
 
 extension URL {
-    static var macNotesStore: URL {
+    nonisolated static var macNotesStore: URL {
         let library = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         return (library ?? URL.homeDirectory.appending(path: "Library/Application Support"))

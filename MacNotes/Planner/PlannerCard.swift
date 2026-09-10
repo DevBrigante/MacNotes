@@ -11,7 +11,9 @@ struct PlannerCard: View {
         VStack(alignment: .leading, spacing: 8) {
             row
             if planner.editing == task.id {
-                NotesField(task: task, tasks: planner.tasks)
+                TaskDetailsFields(task: task, tasks: planner.tasks) {
+                    planner.editing = nil
+                }
             }
         }
         .padding(.horizontal, 10)
@@ -165,32 +167,51 @@ struct PlannerCard: View {
     }
 }
 
-struct NotesField: View {
+struct TaskDetailsFields: View {
     let task: Task
     let tasks: TaskStore
+    let finish: () -> Void
 
+    @State private var title = ""
     @State private var written = ""
 
     var body: some View {
-        TextEditor(text: $written)
-            .font(.system(size: 12))
-            .scrollContentBackground(.hidden)
-            .frame(height: 68)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 4)
-            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-            .overlay(alignment: .topLeading) {
-                if written.isEmpty {
-                    Text("Notes")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.tertiary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .allowsHitTesting(false)
+        VStack(spacing: 6) {
+            TextField("Task title", text: $title)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .padding(.horizontal, 10)
+                .frame(height: 30)
+                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                .onChange(of: title) { tasks.rename(title, on: task.id) }
+            TextEditor(text: $written)
+                .font(.system(size: 12))
+                .scrollContentBackground(.hidden)
+                .frame(height: 68)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 4)
+                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(alignment: .topLeading) {
+                    if written.isEmpty {
+                        Text("Notes (optional)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .allowsHitTesting(false)
+                    }
                 }
-            }
-            .onAppear { written = task.notes ?? "" }
-            .onChange(of: written) { tasks.note(written, on: task.id) }
+                .onChange(of: written) { tasks.note(written, on: task.id) }
+                .onKeyPress(.return) {
+                    tasks.note(written, on: task.id)
+                    finish()
+                    return .handled
+                }
+        }
+        .onAppear {
+            title = task.title
+            written = task.notes ?? ""
+        }
     }
 }
 

@@ -67,6 +67,17 @@ final class PlannerWindowControllerTests {
         #expect(opened.isEmpty)
         #expect(ordinary.isEmpty)
     }
+
+    @Test func openingOnADisplayCentresThePlannerInItsVisibleArea() {
+        let window = NSRect(x: 0, y: 0, width: 780, height: 500)
+        let display = NSRect(x: 1512, y: 24, width: 2560, height: 1416)
+
+        let frame = PlannerWindowController.frame(window, centredIn: display)
+
+        #expect(frame.midX == display.midX)
+        #expect(frame.midY == display.midY)
+        #expect(frame.size == window.size)
+    }
 }
 
 struct MonthCalendarTests {

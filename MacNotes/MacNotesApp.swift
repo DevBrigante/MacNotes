@@ -54,7 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showTheOneSurfaceAtATime() {
-        notch?.model.plannerAsked = { [weak self] in self?.planner?.open() }
+        notch?.plannerAsked = { [weak self] screen in self?.planner?.open(on: screen) }
         planner?.openChanged = { [weak self] isOpen in
             self?.notch?.model.plannerChanged(isOpen: isOpen)
         }

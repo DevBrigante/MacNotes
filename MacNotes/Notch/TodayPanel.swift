@@ -38,7 +38,6 @@ struct TodayPanel: View {
                 .contentShape(Rectangle())
                 .onTapGesture { letGo() }
         )
-        .overlay { allottingLayer }
         .onChange(of: model.state) { forgetTheCompleted() }
         .onReceive(
             NotificationCenter.default.publisher(for: NSColor.systemColorsDidChangeNotification)
@@ -97,7 +96,7 @@ struct TodayPanel: View {
                             model: model, tasks: tasks, sessions: sessions, listed: listed,
                             day: day, accent: accent, allotting: allotting,
                             onAllot: toggleAllotting, onAct: giveUpWhatWasOpen,
-                            scroller: scroller, contentTop: contentTop,
+                            isAllotting: isAllotting, scroller: scroller, contentTop: contentTop,
                             viewport: viewport.size.height, justCompleted: $justCompleted)
                             .background(
                                 GeometryReader { content in
@@ -127,76 +126,6 @@ struct TodayPanel: View {
             .onTapGesture { giveUpWhatWasOpen() }
     }
 
-    @ViewBuilder
-    private var allottingLayer: some View {
-        if let allotting, let task = tasks.task(allotting) {
-            ZStack(alignment: .bottomLeading) {
-                Color.black.opacity(0.001)
-                    .contentShape(Rectangle())
-                    .onTapGesture { closeAllotting() }
-                picker(task)
-                    .padding(.trailing, ActivityGraph.width)
-                    .padding(.bottom, 28)
-            }
-            .transition(.opacity)
-        }
-    }
-
-    private func picker(_ task: Task) -> some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 14) {
-                step("minus", on: task, by: -1)
-                VStack(spacing: -1) {
-                    Text("\(task.allotted.minutes)")
-                        .font(.system(size: 15, weight: .semibold).monospacedDigit())
-                    Text("MIN")
-                        .font(.system(size: 7, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.4))
-                }
-                .frame(width: 40)
-                step("plus", on: task, by: 1)
-            }
-            HStack(spacing: 4) {
-                ForEach(AllottedTime.presets, id: \.self) { preset in
-                    preseted(preset, on: task)
-                }
-            }
-        }
-        .padding(.vertical, 7)
-        .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.06))
-    }
-
-    private func step(_ symbol: String, on task: Task, by minutes: Int) -> some View {
-        Button {
-            tasks.allot(task.allotted.stepped(by: minutes), to: task.id)
-        } label: {
-            Image(systemName: symbol)
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(Color.white.opacity(0.8))
-                .frame(width: 20, height: 20)
-                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 5))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func preseted(_ minutes: Int, on task: Task) -> some View {
-        let chosen = task.allotted.minutes == minutes
-        return Button {
-            tasks.allot(AllottedTime(minutes: minutes), to: task.id)
-        } label: {
-            Text("\(minutes)")
-                .font(.system(size: 9, weight: .semibold).monospacedDigit())
-                .foregroundStyle(chosen ? Color.white : Color.white.opacity(0.5))
-                .frame(width: 24, height: 16)
-                .background(
-                    chosen ? accent : Color.white.opacity(0.08),
-                    in: RoundedRectangle(cornerRadius: 4)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
     private var capture: some View {
         TextField("Add a task", text: $draft)
             .textFieldStyle(.plain)
@@ -223,11 +152,21 @@ struct TodayPanel: View {
 
     private func toggleAllotting(_ task: Task) {
         letGo()
-        let opening = allotting != task.id
+        setAllotting(allotting != task.id, for: task)
+    }
+
+    private func isAllotting(_ task: Task) -> Binding<Bool> {
+        Binding(
+            get: { allotting == task.id },
+            set: { setAllotting($0, for: task) }
+        )
+    }
+
+    private func setAllotting(_ isPresented: Bool, for task: Task) {
         withAnimation(.easeOut(duration: 0.12)) {
-            allotting = opening ? task.id : nil
+            allotting = isPresented ? task.id : (allotting == task.id ? nil : allotting)
         }
-        model.allottingChanged(isAllotting: opening)
+        model.allottingChanged(isAllotting: allotting != nil)
     }
 
     private func closeAllotting() {
@@ -262,6 +201,7 @@ struct TodayCards: View {
     let allotting: Task.ID?
     let onAllot: (Task) -> Void
     let onAct: () -> Void
+    let isAllotting: (Task) -> Binding<Bool>
     var scroller: ScrollViewProxy?
     var contentTop: CGFloat = 0
     var viewport: CGFloat = 0
@@ -343,6 +283,9 @@ struct TodayCards: View {
                 .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
             }
             .buttonStyle(.plain)
+            .popover(isPresented: isAllotting(task), arrowEdge: .trailing) {
+                AllottedTimePicker(task: task, tasks: tasks)
+            }
         }
     }
 
