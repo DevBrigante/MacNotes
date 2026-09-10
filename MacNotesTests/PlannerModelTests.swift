@@ -11,6 +11,7 @@ final class PlannerModelTests {
     private let folder = TemporaryFolder()
     private let tasks: TaskStore
     private let sessions: FocusSessionModel
+    private let calendar: CalendarEvents
     private let planner: PlannerModel
 
     init() {
@@ -18,8 +19,10 @@ final class PlannerModelTests {
             file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60,
             notices: NotificationCenter())
         sessions = FocusSessionModel(now: { 0 }, tick: 60, workspace: NotificationCenter())
+        calendar = CalendarEvents(source: CalendarEventSourceStub(access: .notConnected))
         planner = PlannerModel(
-            tasks: tasks, sessions: sessions, today: today, notices: NotificationCenter())
+            tasks: tasks, sessions: sessions, calendar: calendar, today: today,
+            notices: NotificationCenter())
     }
 
     deinit {
@@ -72,6 +75,44 @@ final class PlannerModelTests {
 
         #expect(planner.month == Day(year: 2026, month: 11, day: 1))
         #expect(planner.selected == today)
+    }
+
+    @Test func pickingADayShowsThatDaysCalendarEventsWithoutChangingTasks() {
+        let event = CalendarEvent(
+            id: "review", title: "Design review",
+            startsAt: Date(timeIntervalSince1970: 1_788_608_400),
+            endsAt: Date(timeIntervalSince1970: 1_788_612_000), isAllDay: false)
+        let source = CalendarEventSourceStub(access: .connected, events: [event])
+        let calendar = CalendarEvents(source: source)
+        let planner = PlannerModel(
+            tasks: tasks, sessions: sessions, calendar: calendar,
+            today: today, notices: NotificationCenter())
+        let task = Task(title: "Book the flight", day: today)
+        tasks.add(task)
+
+        planner.pick(tomorrow)
+
+        #expect(source.requestedDays == [today, tomorrow])
+        #expect(calendar.events == [event])
+        #expect(tasks.task(task.id) == task)
+    }
+
+    @Test func returningFromSystemSettingsRefreshesTheSelectedDaysCalendar() {
+        let event = CalendarEvent(
+            id: "review", title: "Design review",
+            startsAt: Date(timeIntervalSince1970: 1_788_608_400),
+            endsAt: Date(timeIntervalSince1970: 1_788_612_000), isAllDay: false)
+        let source = CalendarEventSourceStub(access: .denied, events: [event])
+        let calendar = CalendarEvents(source: source)
+        let planner = PlannerModel(
+            tasks: tasks, sessions: sessions, calendar: calendar,
+            today: today, notices: NotificationCenter())
+
+        source.access = .connected
+        planner.refreshCalendar()
+
+        #expect(calendar.events == [event])
+        #expect(source.requestedDays == [today])
     }
 
     @Test func theTodayButtonComesBackFromWhereverItWas() {

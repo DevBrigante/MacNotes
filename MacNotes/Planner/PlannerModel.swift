@@ -13,21 +13,25 @@ final class PlannerModel {
 
     @ObservationIgnored let tasks: TaskStore
     @ObservationIgnored let sessions: FocusSessionModel
+    @ObservationIgnored let calendar: CalendarEvents
     @ObservationIgnored private let notices: NotificationCenter
     @ObservationIgnored private var dayTurned: (any NSObjectProtocol)?
 
     init(
         tasks: TaskStore,
         sessions: FocusSessionModel,
+        calendar: CalendarEvents? = nil,
         today: Day = .today(),
         notices: NotificationCenter = .default
     ) {
         self.tasks = tasks
         self.sessions = sessions
+        self.calendar = calendar ?? CalendarEvents()
         self.today = today
         self.notices = notices
         selected = today
         month = today.firstOfItsMonth
+        self.calendar.load(on: today)
         watchForTheDayTurning()
     }
 
@@ -52,6 +56,7 @@ final class PlannerModel {
         listing = .day
         editing = nil
         justCompleted = []
+        calendar.load(on: day)
     }
 
     func show() {
@@ -65,6 +70,18 @@ final class PlannerModel {
 
     func capture(_ title: String) {
         tasks.capture(title, on: capturesOn)
+    }
+
+    func connectCalendar() async {
+        await calendar.connect()
+    }
+
+    func openCalendarSettings() {
+        calendar.openSettings()
+    }
+
+    func refreshCalendar() {
+        calendar.load(on: selected)
     }
 
     func toggleCompletion(of task: Task) {

@@ -78,6 +78,24 @@ final class PlannerWindowControllerTests {
         #expect(frame.midY == display.midY)
         #expect(frame.size == window.size)
     }
+
+    @Test func becomingKeyRefreshesCalendarAccessAfterSystemSettings() {
+        let event = CalendarEvent(
+            id: "review", title: "Design review",
+            startsAt: Date(timeIntervalSince1970: 1_788_608_400),
+            endsAt: Date(timeIntervalSince1970: 1_788_612_000), isAllDay: false)
+        let source = CalendarEventSourceStub(access: .denied, events: [event])
+        let calendar = CalendarEvents(source: source)
+        let controller = PlannerWindowController(
+            tasks: TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60),
+            sessions: FocusSessionModel(now: { 0 }, tick: 60, workspace: NotificationCenter()),
+            calendar: calendar)
+
+        source.access = .connected
+        controller.windowDidBecomeKey(Notification(name: NSWindow.didBecomeKeyNotification))
+
+        #expect(calendar.events == [event])
+    }
 }
 
 struct MonthCalendarTests {

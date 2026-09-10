@@ -13,8 +13,8 @@ final class PlannerWindowController: NSObject, NSWindowDelegate {
 
     private let planner: PlannerModel
 
-    init(tasks: TaskStore, sessions: FocusSessionModel) {
-        planner = PlannerModel(tasks: tasks, sessions: sessions)
+    init(tasks: TaskStore, sessions: FocusSessionModel, calendar: CalendarEvents? = nil) {
+        planner = PlannerModel(tasks: tasks, sessions: sessions, calendar: calendar)
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 780, height: 500),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -63,5 +63,9 @@ final class PlannerWindowController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         appBecomesOrdinary(false)
         openChanged?(false)
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        planner.refreshCalendar()
     }
 }
