@@ -53,6 +53,19 @@ final class FocusSessionModelTests {
         #expect(sessions.session?.isPaused == true)
     }
 
+    @Test func theGlobalHotkeyResumesTheSessionItPaused() {
+        sessions.start(.init(minutes: 25), on: task)
+        stopwatch.advance(by: 60)
+        sessions.respondToTheGlobalHotkey(with: [], on: .today())
+
+        sessions.respondToTheGlobalHotkey(with: [], on: .today())
+
+        #expect(sessions.session?.task == task)
+        #expect(sessions.isRunning)
+        #expect(sessions.remaining == 24 * 60)
+        #expect(sessions.clock != nil)
+    }
+
     @Test func theGlobalHotkeyStartsTheFirstUncompletedTaskForToday() {
         let today = Day.today()
         let completed = Task(title: "Send the report", day: today)

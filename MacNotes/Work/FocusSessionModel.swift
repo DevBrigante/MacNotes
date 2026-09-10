@@ -58,7 +58,7 @@ final class FocusSessionModel {
 
     func respondToTheGlobalHotkey(with tasks: [Task], on today: Day) {
         guard session == nil else {
-            pause()
+            if session?.isPaused == true { resume() } else { pause() }
             return
         }
         guard let task = tasks.first(where: { $0.day == today && $0.isCompleted == false }) else {
