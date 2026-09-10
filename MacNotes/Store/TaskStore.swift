@@ -107,6 +107,14 @@ final class TaskStore {
         scheduleSave()
     }
 
+    func rename(_ title: String, on id: Task.ID) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard title.isEmpty == false, tasks[index].title != title else { return }
+        tasks[index].title = title
+        scheduleSave()
+    }
+
     func allot(_ time: AllottedTime, to id: Task.ID) {
         guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
         guard tasks[index].allotted != time else { return }

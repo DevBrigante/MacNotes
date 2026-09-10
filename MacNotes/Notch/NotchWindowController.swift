@@ -7,6 +7,7 @@ final class NotchWindowController {
     let panel = NotchPanel()
     let model = NotchPanelModel()
     let sessions: FocusSessionModel
+    var plannerAsked: (@MainActor (NSScreen?) -> Void)?
 
     private let tasks: TaskStore
     private let tracking = NotchTrackingView()
@@ -37,6 +38,10 @@ final class NotchWindowController {
         panel.contentView = tracking
 
         model.layoutChanged = { [weak self] in self?.placeIfNeeded() }
+        model.plannerAsked = { [weak self] in
+            guard let self else { return }
+            self.plannerAsked?(self.activeDisplay.screen)
+        }
         watchTheCursor()
         watchTheSession()
         followTheCursorAcrossDisplays()

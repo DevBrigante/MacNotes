@@ -8,7 +8,7 @@ final class PlannerWindowController: NSObject, NSWindowDelegate {
     var openChanged: (@MainActor (Bool) -> Void)?
     var appBecomesOrdinary: @MainActor (Bool) -> Void = { ordinary in
         NSApp.setActivationPolicy(ordinary ? .regular : .accessory)
-        if ordinary { NSApp.activate() }
+        if ordinary { NSApp.activate(ignoringOtherApps: true) }
     }
 
     private let planner: PlannerModel
@@ -36,11 +36,23 @@ final class PlannerWindowController: NSObject, NSWindowDelegate {
         window.isVisible
     }
 
-    func open() {
+    func open(on screen: NSScreen? = nil) {
         planner.show()
         appBecomesOrdinary(true)
+        if let screen {
+            window.setFrame(Self.frame(window.frame, centredIn: screen.visibleFrame), display: true)
+        }
         window.makeKeyAndOrderFront(nil)
         openChanged?(true)
+    }
+
+    static func frame(_ window: NSRect, centredIn visibleFrame: NSRect) -> NSRect {
+        NSRect(
+            x: visibleFrame.midX - window.width / 2,
+            y: visibleFrame.midY - window.height / 2,
+            width: window.width,
+            height: window.height
+        )
     }
 
     func close() {

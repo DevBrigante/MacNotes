@@ -201,6 +201,16 @@ final class TaskStoreTests {
         #expect(store.tasks.count == 1)
     }
 
+    @Test func renamingTrimsTheTitleAndKeepsTheLastNonemptyOne() {
+        let task = Task(title: "Book the flight")
+        store.add(task)
+
+        store.rename("  Renew the passport  ", on: task.id)
+        store.rename("   ", on: task.id)
+
+        #expect(store.task(task.id)?.title == "Renew the passport")
+    }
+
     @Test func completingATaskRecordsTheDayItWasDoneOn() {
         store.load(on: today)
         store.add(Task(title: "Book the flight", day: yesterday))
