@@ -36,6 +36,15 @@ struct PlannerView: View {
             heading
             Divider()
             cards
+            if planner.listing == .day {
+                Divider()
+                CalendarCard(
+                    access: planner.calendar.access,
+                    events: planner.calendar.events,
+                    connect: { Swift.Task { await planner.connectCalendar() } },
+                    openSettings: planner.openCalendarSettings
+                )
+            }
             Divider()
             capture
         }
