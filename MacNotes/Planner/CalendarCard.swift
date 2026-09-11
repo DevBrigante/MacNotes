@@ -18,6 +18,8 @@ struct CalendarCard: View {
                 schedule
             case .denied:
                 denied
+            case .unavailable:
+                unavailable
             }
         }
         .padding(12)
@@ -60,6 +62,19 @@ struct CalendarCard: View {
                 .foregroundStyle(.secondary)
             Button("Open System Settings", action: openSettings)
                 .controlSize(.small)
+        }
+    }
+
+    private var unavailable: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("MacNotes could not request Calendar access.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Button("Try Again", action: connect)
+                Button("Open System Settings", action: openSettings)
+            }
+            .controlSize(.small)
         }
     }
 
