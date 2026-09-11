@@ -1,0 +1,151 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, package, notarize, publish
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      AC_API_KEY_ID: ${{ secrets.AC_API_KEY_ID }}
+      AC_API_KEY_ISSUER_ID: ${{ secrets.AC_API_KEY_ISSUER_ID }}
+      AC_API_KEY_P8: ${{ secrets.AC_API_KEY_P8 }}
+      DEVELOPER_ID_APPLICATION_CERTIFICATE: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE }}
+      DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD }}
+      NOTARIZATION_KEYCHAIN_PASSWORD: ${{ secrets.NOTARIZATION_KEYCHAIN_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: version
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          test "${version}" != "${tag}"
+          test -n "${version}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Release
+        run: |
+          set -euo pipefail
+          derived_data_path="${RUNNER_TEMP}/DerivedData"
+          xcodebuild \
+            -project MacNotes.xcodeproj \
+            -scheme MacNotes \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath "${derived_data_path}" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            build
+
+      - name: Locate app
+        id: app
+        run: |
+          set -euo pipefail
+          app_path="$(find "${RUNNER_TEMP}/DerivedData" -type d -name 'MacNotes.app' -path '*Release*' -print -quit)"
+          test -n "${app_path}"
+          echo "path=${app_path}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Developer ID signing
+        id: developer_id
+        if: ${{ env.AC_API_KEY_ID != '' && env.AC_API_KEY_ISSUER_ID != '' && env.AC_API_KEY_P8 != '' && env.DEVELOPER_ID_APPLICATION_CERTIFICATE != '' && env.DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD != '' && env.NOTARIZATION_KEYCHAIN_PASSWORD != '' }}
+        run: |
+          set -euo pipefail
+          certificate_path="${RUNNER_TEMP}/developer-id-application.p12"
+          keychain_path="${RUNNER_TEMP}/notarization.keychain-db"
+          printf '%s' "${DEVELOPER_ID_APPLICATION_CERTIFICATE}" | base64 -D > "${certificate_path}"
+          security create-keychain -p "${NOTARIZATION_KEYCHAIN_PASSWORD}" "${keychain_path}"
+          security set-keychain-settings -lut 21600 "${keychain_path}"
+          security unlock-keychain -p "${NOTARIZATION_KEYCHAIN_PASSWORD}" "${keychain_path}"
+          security import "${certificate_path}" -k "${keychain_path}" -P "${DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s "${keychain_path}"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${NOTARIZATION_KEYCHAIN_PASSWORD}" "${keychain_path}"
+          identity="$(security find-identity -v -p codesigning "${keychain_path}" | awk '/Developer ID Application/ { print $2; exit }')"
+          test -n "${identity}"
+          echo "identity=${identity}" >> "$GITHUB_OUTPUT"
+
+      - name: Re-sign app
+        run: |
+          set -euo pipefail
+          codesign --force --deep --sign - "${{ steps.app.outputs.path }}"
+          if [ -n "${{ steps.developer_id.outputs.identity }}" ]; then
+            codesign --force --deep --sign "${{ steps.developer_id.outputs.identity }}" --options runtime --timestamp --preserve-metadata=identifier,entitlements,flags "${{ steps.app.outputs.path }}"
+          fi
+          codesign --verify --deep --strict "${{ steps.app.outputs.path }}"
+
+      - name: Create DMG
+        id: dmg
+        run: |
+          set -euo pipefail
+          stage="${RUNNER_TEMP}/dmg-staging"
+          dmg="MacNotes-${{ steps.version.outputs.version }}.dmg"
+          rm -rf "${stage}"
+          mkdir -p "${stage}"
+          cp -R "${{ steps.app.outputs.path }}" "${stage}/"
+          ln -s /Applications "${stage}/Applications"
+          hdiutil create \
+            -volname "MacNotes ${{ steps.version.outputs.version }}" \
+            -srcfolder "${stage}" \
+            -ov \
+            -format UDZO \
+            "${dmg}"
+          echo "path=${dmg}" >> "$GITHUB_OUTPUT"
+
+      - name: Install git-cliff
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            https://github.com/orhun/git-cliff/releases/download/v2.13.1/git-cliff-2.13.1-aarch64-apple-darwin.tar.gz \
+            | tar xz -C "${RUNNER_TEMP}"
+          "${RUNNER_TEMP}/git-cliff-2.13.1/git-cliff" --version
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          set -euo pipefail
+          previous_tag="$(git tag --merged HEAD --sort=-version:refname | grep -Fxv "${{ steps.version.outputs.tag }}" | head -n 1 || true)"
+          changelog="${RUNNER_TEMP}/release-notes.md"
+          if [ -n "${previous_tag}" ]; then
+            "${RUNNER_TEMP}/git-cliff-2.13.1/git-cliff" --config cliff.toml --tag "${{ steps.version.outputs.tag }}" "${previous_tag}..HEAD" --output "${changelog}"
+          else
+            "${RUNNER_TEMP}/git-cliff-2.13.1/git-cliff" --config cliff.toml --tag "${{ steps.version.outputs.tag }}" --output "${changelog}"
+          fi
+          echo "path=${changelog}" >> "$GITHUB_OUTPUT"
+
+      - name: Notarize DMG
+        if: ${{ steps.developer_id.outputs.identity != '' }}
+        run: |
+          set -euo pipefail
+          key_file="$(mktemp -t ac_key).p8"
+          trap 'rm -f "${key_file}"' EXIT
+          printf '%s' "${AC_API_KEY_P8}" > "${key_file}"
+          xcrun notarytool submit "${{ steps.dmg.outputs.path }}" \
+            --key "${key_file}" \
+            --key-id "${AC_API_KEY_ID}" \
+            --issuer "${AC_API_KEY_ISSUER_ID}" \
+            --wait
+          xcrun stapler staple "${{ steps.dmg.outputs.path }}"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ steps.version.outputs.tag }}" "${{ steps.dmg.outputs.path }}" \
+            --title "MacNotes ${{ steps.version.outputs.version }}" \
+            --notes-file "${{ steps.changelog.outputs.path }}" \
+            ${{ contains(steps.version.outputs.version, '-') && '--prerelease' || '' }}
