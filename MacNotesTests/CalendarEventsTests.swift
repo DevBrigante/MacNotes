@@ -48,6 +48,18 @@ final class CalendarEventsTests {
         #expect(source.requestedDays == [day])
     }
 
+    @Test func aCalendarWhoseAccessRequestFailsSaysSo() async {
+        let source = CalendarEventSourceStub(access: .notConnected, shouldFailToConnect: true)
+        let calendar = CalendarEvents(source: source)
+
+        calendar.load(on: day)
+        await calendar.connect()
+
+        #expect(source.didRequestAccess)
+        #expect(calendar.access == .unavailable)
+        #expect(calendar.events.isEmpty)
+    }
+
     @Test func aDeniedCalendarOffersSystemSettingsWithoutReadingEvents() {
         let source = CalendarEventSourceStub(access: .denied)
         let calendar = CalendarEvents(source: source)
@@ -64,17 +76,24 @@ final class CalendarEventsTests {
 final class CalendarEventSourceStub: CalendarEventSource {
     var access: CalendarAccess
     var events: [CalendarEvent]
+    var shouldFailToConnect: Bool
     private(set) var requestedDays: [Day] = []
     private(set) var didRequestAccess = false
     private(set) var didOpenSettings = false
 
-    init(access: CalendarAccess, events: [CalendarEvent] = []) {
+    init(
+        access: CalendarAccess,
+        events: [CalendarEvent] = [],
+        shouldFailToConnect: Bool = false
+    ) {
         self.access = access
         self.events = events
+        self.shouldFailToConnect = shouldFailToConnect
     }
 
     func requestAccess() async throws {
         didRequestAccess = true
+        if shouldFailToConnect { throw CalendarConnectionError.failed }
         access = .connected
     }
 
@@ -86,4 +105,8 @@ final class CalendarEventSourceStub: CalendarEventSource {
     func openSettings() {
         didOpenSettings = true
     }
+}
+
+private enum CalendarConnectionError: Error {
+    case failed
 }

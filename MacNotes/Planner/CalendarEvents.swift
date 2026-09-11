@@ -7,6 +7,7 @@ enum CalendarAccess: Equatable {
     case notConnected
     case connected
     case denied
+    case unavailable
 }
 
 struct CalendarEvent: Equatable, Identifiable {
@@ -51,8 +52,12 @@ final class CalendarEvents {
     }
 
     func connect() async {
-        try? await source.requestAccess()
-        access = source.access
+        do {
+            try await source.requestAccess()
+            access = source.access
+        } catch {
+            access = .unavailable
+        }
         refresh()
     }
 
@@ -87,6 +92,7 @@ private final class EventKitCalendarEventSource: CalendarEventSource {
     }
 
     func requestAccess() async throws {
+        NSApp.activate(ignoringOtherApps: true)
         _ = try await store.requestFullAccessToEvents()
     }
 

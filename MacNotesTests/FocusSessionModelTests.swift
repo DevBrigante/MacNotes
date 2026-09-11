@@ -44,6 +44,55 @@ final class FocusSessionModelTests {
         #expect(sessions.clock != nil)
     }
 
+    @Test func theGlobalHotkeyPausesTheSessionUnderway() {
+        sessions.start(.init(minutes: 25), on: task)
+
+        sessions.respondToTheGlobalHotkey(with: [], on: .today())
+
+        #expect(sessions.session?.task == task)
+        #expect(sessions.session?.isPaused == true)
+    }
+
+    @Test func theGlobalHotkeyResumesTheSessionItPaused() {
+        sessions.start(.init(minutes: 25), on: task)
+        stopwatch.advance(by: 60)
+        sessions.respondToTheGlobalHotkey(with: [], on: .today())
+
+        sessions.respondToTheGlobalHotkey(with: [], on: .today())
+
+        #expect(sessions.session?.task == task)
+        #expect(sessions.isRunning)
+        #expect(sessions.remaining == 24 * 60)
+        #expect(sessions.clock != nil)
+    }
+
+    @Test func theGlobalHotkeyStartsTheFirstUncompletedTaskForToday() {
+        let today = Day.today()
+        let completed = Task(title: "Send the report", day: today)
+        let first = Task(title: "Book the flight", day: today, allotted: .init(minutes: 15))
+        let second = Task(title: "Renew the passport", day: today)
+        var finished = completed
+        finished.complete(on: today)
+
+        sessions.respondToTheGlobalHotkey(with: [finished, first, second], on: today)
+
+        #expect(sessions.session?.task == first.id)
+        #expect(sessions.remaining == AllottedTime.standard.seconds)
+    }
+
+    @Test func theGlobalHotkeyDoesNothingWithoutAnUncompletedTaskForToday() {
+        let today = Day.today()
+        let completed = Task(title: "Send the report", day: today)
+        var finished = completed
+        finished.complete(on: today)
+        let tomorrow = Task(title: "Book the flight", day: today.stepped(by: 1))
+
+        sessions.respondToTheGlobalHotkey(with: [finished, tomorrow], on: today)
+
+        #expect(sessions.session == nil)
+        #expect(sessions.remaining == 0)
+    }
+
     @Test func theRemainingTimeFollowsTheClock() {
         sessions.start(.init(minutes: 25), on: task)
 
