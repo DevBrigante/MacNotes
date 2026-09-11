@@ -68,8 +68,9 @@ final class PlannerModel {
         show()
     }
 
-    func capture(_ title: String) {
-        tasks.capture(title, on: capturesOn)
+    @discardableResult
+    func capture(_ title: String, notes: String? = nil) -> Task? {
+        tasks.capture(title, notes: notes, on: capturesOn)
     }
 
     func connectCalendar() async {

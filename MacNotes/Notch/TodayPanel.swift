@@ -3,11 +3,6 @@ import Combine
 import SwiftUI
 
 struct TodayPanel: View {
-    private enum CaptureField: Hashable {
-        case title
-        case notes
-    }
-
     static let cardHeight: CGFloat = 30
     static let cardGap: CGFloat = 6
     static let cardStride: CGFloat = cardHeight + cardGap
@@ -21,14 +16,13 @@ struct TodayPanel: View {
     let revealedTask: Task.ID?
 
     @State private var draft = ""
-    @State private var notes = ""
     @State private var allotting: Task.ID?
     @State private var dragging: Task.ID?
     @State private var carried: CGFloat = 0
     @State private var justCompleted: Set<Task.ID> = []
     @State private var contentTop: CGFloat = 0
     @State private var accent = SystemAccent.colour()
-    @FocusState private var capturing: CaptureField?
+    @FocusState private var capturing: Bool
 
     private let day = Day.today()
 
@@ -153,47 +147,21 @@ struct TodayPanel: View {
     }
 
     private var capture: some View {
-        VStack(spacing: 0) {
-            TextField("Add a task", text: $draft)
-                .textFieldStyle(.plain)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.white.opacity(0.85))
-                .focused($capturing, equals: .title)
-                .onSubmit(keep)
-                .onExitCommand(perform: letGo)
-                .padding(.horizontal, 12)
-                .frame(height: 28)
-            TextEditor(text: $notes)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.white.opacity(0.85))
-                .focused($capturing, equals: .notes)
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .frame(height: 50)
-                .overlay(alignment: .topLeading) {
-                    if notes.isEmpty {
-                        Text("Notes (optional)")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.white.opacity(0.45))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .allowsHitTesting(false)
-                    }
-                }
-                .onKeyPress(.return, phases: .down) { press in
-                    guard press.modifiers.contains(.shift) == false else { return .ignored }
-                    keep()
-                    return .handled
-                }
-                .onExitCommand(perform: letGo)
-        }
-        .onChange(of: capturing) { model.captureChanged(hasTheKeyboard: capturing != nil) }
-        .onReceive(
-            NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)
-        ) { _ in
-            letGo()
-        }
+        TextField("Add a task", text: $draft)
+            .textFieldStyle(.plain)
+            .font(.system(size: 11))
+            .foregroundStyle(Color.white.opacity(0.85))
+            .focused($capturing)
+            .onSubmit(keep)
+            .onExitCommand(perform: letGo)
+            .padding(.horizontal, 12)
+            .frame(height: 28)
+            .onChange(of: capturing) { model.captureChanged(hasTheKeyboard: capturing) }
+            .onReceive(
+                NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)
+            ) { _ in
+                letGo()
+            }
     }
 
     private func forgetTheCompleted() {
@@ -233,15 +201,13 @@ struct TodayPanel: View {
     }
 
     private func keep() {
-        guard tasks.capture(draft, notes: notes, on: day) != nil else { return }
+        guard tasks.capture(draft, on: day) != nil else { return }
         draft = ""
-        notes = ""
     }
 
     private func letGo() {
         draft = ""
-        notes = ""
-        capturing = nil
+        capturing = false
     }
 
     private func revealTask(with scroller: ScrollViewProxy) {

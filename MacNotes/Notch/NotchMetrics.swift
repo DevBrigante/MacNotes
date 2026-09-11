@@ -6,7 +6,7 @@ nonisolated struct NotchMetrics: Equatable {
         static let collapsedFlank: CGFloat = 72
         static let expandedFlank: CGFloat = 132
         static let collapsedDrop: CGFloat = 10
-        static let expandedDrop: CGFloat = 190
+        static let expandedDrop: CGFloat = 140
     }
 
     static let simulatedNotchWidth: CGFloat = 200

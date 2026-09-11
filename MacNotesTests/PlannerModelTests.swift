@@ -160,14 +160,15 @@ final class PlannerModelTests {
         #expect(tasks.task(task.id)?.completedOn == tomorrow)
     }
 
-    @Test func captureLandsOnTheDayOnShowAndNowhereAtAllInTheUnscheduled() {
+    @Test func captureLandsOnTheDayOnShowWithItsNotesAndNowhereAtAllInTheUnscheduled() {
         planner.pick(tomorrow)
-        planner.capture("Book the flight")
+        planner.capture("Book the flight", notes: "Aisle seat\nPassport number")
 
         planner.listing = .unscheduled
         planner.capture("Read the manual")
 
         #expect(tasks.onTheDay(tomorrow).map(\.title) == ["Book the flight"])
+        #expect(tasks.onTheDay(tomorrow).first?.notes == "Aisle seat\nPassport number")
         #expect(tasks.unscheduled.map(\.title) == ["Read the manual"])
     }
 
