@@ -99,7 +99,8 @@ struct NotchPanelView: View {
         VStack(spacing: 0) {
             Color.clear
                 .frame(height: metrics.notchGap(for: .expanded).height)
-            TodayPanel(model: model, tasks: tasks, sessions: sessions)
+            TodayPanel(
+                model: model, tasks: tasks, sessions: sessions, revealedTask: model.revealedTask)
         }
     }
 

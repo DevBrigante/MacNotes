@@ -126,6 +126,10 @@ final class NotchWindowController {
         metrics.panelFrame(for: model.state)
     }
 
+    func reveal(_ task: Task.ID) {
+        model.reveal(task)
+    }
+
     private func place(animated: Bool) {
         let frame = intendedFrame
         if model.state != .expanded { handBackTheKeyboard() }

@@ -9,6 +9,7 @@ final class FocusSessionModel {
     private(set) var remaining: TimeInterval = 0
 
     @ObservationIgnored var sessionIsUnderway: (@MainActor (Bool) -> Void)?
+    @ObservationIgnored var sessionEnded: (@MainActor (Task.ID) -> Void)?
     @ObservationIgnored private(set) var clock: Timer?
     @ObservationIgnored private let now: @MainActor () -> TimeInterval
     @ObservationIgnored private let tick: TimeInterval
@@ -89,10 +90,11 @@ final class FocusSessionModel {
     }
 
     func end() {
-        guard session != nil else { return }
-        session = nil
+        guard let session else { return }
+        self.session = nil
         remaining = 0
         putTheClockDown()
+        sessionEnded?(session.task)
         sessionIsUnderway?(false)
     }
 

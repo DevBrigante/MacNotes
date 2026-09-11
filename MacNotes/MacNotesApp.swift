@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settingsStore = SettingsStore()
     private let calendar = CalendarEvents()
     lazy var settings = SettingsModel(store: settingsStore, calendar: calendar)
+    private lazy var sessionEndNotifications = SessionEndNotifications(settings: settingsStore)
     private var notch: NotchWindowController?
     private var planner: PlannerWindowController?
     private var hotkey: GlobalHotkey?
@@ -28,6 +29,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsStore.load(on: .today())
         notch = NotchWindowController(tasks: tasks, sessions: sessions, settings: settingsStore)
         planner = PlannerWindowController(tasks: tasks, sessions: sessions, calendar: calendar)
+        sessionEndNotifications.taskOpened = { [weak self] task in
+            self?.planner?.close()
+            self?.notch?.reveal(task)
+        }
+        sessions.sessionEnded = { [weak self] task in
+            guard let self, let task = self.tasks.task(task) else { return }
+            self.sessionEndNotifications.send(for: task)
+        }
         hotkey = GlobalHotkey { [weak self] in
             guard let self else { return }
             self.sessions.respondToTheGlobalHotkey(with: self.tasks.tasks, on: .today())
