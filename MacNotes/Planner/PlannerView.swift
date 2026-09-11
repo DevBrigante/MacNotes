@@ -4,6 +4,7 @@ struct PlannerView: View {
     @Bindable var planner: PlannerModel
 
     @State private var draft = ""
+    @State private var notes = ""
 
     var body: some View {
         HStack(spacing: 0) {
@@ -108,21 +109,46 @@ struct PlannerView: View {
     }
 
     private var capture: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "plus")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-            TextField(planner.listing.invitation, text: $draft)
-                .textFieldStyle(.plain)
-                .font(.system(size: 13))
-                .onSubmit(keep)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                TextField(planner.listing.invitation, text: $draft)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .onSubmit(keep)
+            }
+            TextEditor(text: $notes)
+                .font(.system(size: 12))
+                .scrollContentBackground(.hidden)
+                .frame(height: 54)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 4)
+                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(alignment: .topLeading) {
+                    if notes.isEmpty {
+                        Text("Notes (optional)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .onKeyPress(.return, phases: .down) { press in
+                    guard press.modifiers.contains(.shift) == false else { return .ignored }
+                    keep()
+                    return .handled
+                }
         }
         .padding(.horizontal, 14)
-        .frame(height: 38)
+        .padding(.vertical, 10)
     }
 
     private func keep() {
-        planner.capture(draft)
+        guard planner.capture(draft, notes: notes) != nil else { return }
         draft = ""
+        notes = ""
     }
 }

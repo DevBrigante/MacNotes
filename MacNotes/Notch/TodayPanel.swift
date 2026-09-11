@@ -201,7 +201,7 @@ struct TodayPanel: View {
     }
 
     private func keep() {
-        tasks.capture(draft, on: day)
+        guard tasks.capture(draft, on: day) != nil else { return }
         draft = ""
     }
 
@@ -369,6 +369,7 @@ struct TodayCards: View {
     private func complete(_ task: Task) {
         justCompleted.insert(task.id)
         tasks.complete(task, on: day)
+        sessions.endTheSession(on: task.id)
     }
 
     private func reorder(_ task: Task, reaching centre: CGFloat) {

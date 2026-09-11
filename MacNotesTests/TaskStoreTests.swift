@@ -201,6 +201,16 @@ final class TaskStoreTests {
         #expect(store.tasks.count == 1)
     }
 
+    @Test func quickCaptureKeepsTheNotesItWasGiven() throws {
+        store.load(on: today)
+
+        let captured = try #require(
+            store.capture("Book the flight", notes: "Aisle seat\nPassport number", on: today))
+
+        #expect(captured.notes == "Aisle seat\nPassport number")
+        #expect(store.task(captured.id)?.notes == "Aisle seat\nPassport number")
+    }
+
     @Test func renamingTrimsTheTitleAndKeepsTheLastNonemptyOne() {
         let task = Task(title: "Book the flight")
         store.add(task)

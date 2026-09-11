@@ -160,14 +160,15 @@ final class PlannerModelTests {
         #expect(tasks.task(task.id)?.completedOn == tomorrow)
     }
 
-    @Test func captureLandsOnTheDayOnShowAndNowhereAtAllInTheUnscheduled() {
+    @Test func captureLandsOnTheDayOnShowWithItsNotesAndNowhereAtAllInTheUnscheduled() {
         planner.pick(tomorrow)
-        planner.capture("Book the flight")
+        planner.capture("Book the flight", notes: "Aisle seat\nPassport number")
 
         planner.listing = .unscheduled
         planner.capture("Read the manual")
 
         #expect(tasks.onTheDay(tomorrow).map(\.title) == ["Book the flight"])
+        #expect(tasks.onTheDay(tomorrow).first?.notes == "Aisle seat\nPassport number")
         #expect(tasks.unscheduled.map(\.title) == ["Read the manual"])
     }
 
@@ -224,6 +225,18 @@ final class PlannerModelTests {
         planner.toggleCompletion(of: try #require(tasks.task(task.id)))
 
         #expect(tasks.task(task.id)?.isCompleted == false)
+    }
+
+    @Test func completingThePausedTasksFocusSessionEndsIt() {
+        let task = Task(title: "Book the flight", day: today)
+        tasks.add(task)
+        sessions.startOrPause(task)
+        sessions.pause()
+
+        planner.toggleCompletion(of: task)
+
+        #expect(tasks.task(task.id)?.isCompleted == true)
+        #expect(sessions.session == nil)
     }
 
     @Test func deletingTheTaskASessionIsRunningOnEndsTheSession() {
