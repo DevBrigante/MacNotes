@@ -39,6 +39,17 @@ final class NotchWindowControllerTests {
         #expect(controller.intendedFrame.width > hidden.width)
     }
 
+    @Test func aLongSessionGetsTheWiderCollapsedFrame() {
+        let controller = controller()
+
+        controller.sessions.start(.init(minutes: 9), on: UUID())
+        let compact = controller.intendedFrame
+        controller.sessions.start(.init(minutes: 30), on: UUID())
+        let wide = controller.intendedFrame
+
+        #expect(wide.width > compact.width)
+    }
+
     @Test func theWindowGivesTheStripBackWhenTheSessionEnds() {
         let controller = controller()
         let hidden = controller.intendedFrame

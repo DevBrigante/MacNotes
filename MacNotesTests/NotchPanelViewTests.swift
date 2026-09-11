@@ -183,8 +183,18 @@ final class NotchPanelViewTests {
         let clock = Clock()
         let sessions = FocusSessionModel(
             now: { clock.now }, tick: 60, workspace: NotificationCenter())
-        sessions.start(.init(minutes: 15), on: task)
-        clock.now = AllottedTime(minutes: 15).seconds * fraction
+        sessions.start(.init(minutes: 9), on: task)
+        clock.now = AllottedTime(minutes: 9).seconds * fraction
+        sessions.pause()
+        return sessions
+    }
+
+    private func running(remaining: TimeInterval, on task: Task.ID = UUID()) -> FocusSessionModel {
+        let clock = Clock()
+        let sessions = FocusSessionModel(
+            now: { clock.now }, tick: 60, workspace: NotificationCenter())
+        sessions.start(.init(minutes: 30), on: task)
+        clock.now = AllottedTime(minutes: 30).seconds - remaining
         sessions.pause()
         return sessions
     }
@@ -206,14 +216,15 @@ final class NotchPanelViewTests {
         on metrics: NotchMetrics,
         sessions: FocusSessionModel? = nil,
         tasks: TaskStore? = nil,
+        settings: SettingsStore? = nil,
         grownTo fraction: CGFloat = 1
     ) throws -> Pixels {
-        let frame = metrics.panelFrame(for: model.state)
+        let frame = metrics.panelFrame(for: model.state, allotted: sessions?.session?.allotted)
         return try Pixels(
             NotchPanelView(
                 metrics: metrics, model: model, sessions: sessions ?? idle(),
                 tasks: tasks ?? store(),
-                settings: SettingsStore(file: JSONFile(name: "settings.json", in: folder.url))),
+                settings: settings ?? SettingsStore(file: JSONFile(name: "settings.json", in: folder.url))),
             width: (frame.width * fraction).rounded(),
             height: (frame.height * fraction).rounded())
     }
@@ -228,6 +239,27 @@ final class NotchPanelViewTests {
 
         #expect(pixels.written(across: 8...Int(gap.minX) - 8, down: 8...26))
         #expect(pixels.written(across: Int(gap.maxX) + 8...pixels.width - 14, down: 8...26))
+    }
+
+    @Test func theCollapsedCountdownStaysWithinTheMenuBarStrip() throws {
+        #expect(
+            physical.panelFrame(for: .collapsed, allotted: .init(minutes: 30)).width
+                == physical.notchRect.width + 2 * NotchMetrics.Layout.wideCollapsedFlank)
+
+        let underway = Task(title: "Book the flight", day: .today())
+        let settings = SettingsStore(file: JSONFile(name: "settings.json", in: folder.url))
+        settings.setProgressTrayShown(false)
+        let model = collapsed()
+        let pixels = try render(
+            model, on: physical,
+            sessions: running(remaining: 24 * 60 + 55, on: underway.id),
+            tasks: store([underway]), settings: settings)
+        let gap = physical.notchGap(for: model.state, allotted: .init(minutes: 30))
+
+        #expect(
+            pixels.written(
+                across: Int(gap.maxX) + 8...pixels.width - 8,
+                down: Int(gap.height)...pixels.height - 1) == false)
     }
 
     @Test func theExpandedStripIsPlainBlackWithNoReadoutOnIt() throws {
