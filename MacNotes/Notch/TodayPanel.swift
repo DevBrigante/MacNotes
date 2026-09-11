@@ -13,6 +13,7 @@ struct TodayPanel: View {
     let model: NotchPanelModel
     let tasks: TaskStore
     let sessions: FocusSessionModel
+    let revealedTask: Task.ID?
 
     @State private var draft = ""
     @State private var allotting: Task.ID?
@@ -24,6 +25,18 @@ struct TodayPanel: View {
     @FocusState private var capturing: Bool
 
     private let day = Day.today()
+
+    init(
+        model: NotchPanelModel,
+        tasks: TaskStore,
+        sessions: FocusSessionModel,
+        revealedTask: Task.ID? = nil
+    ) {
+        self.model = model
+        self.tasks = tasks
+        self.sessions = sessions
+        self.revealedTask = revealedTask
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -47,7 +60,12 @@ struct TodayPanel: View {
     }
 
     private var listed: [Task] {
-        tasks.listing(on: day, keeping: justCompleted)
+        let listed = tasks.listing(on: day, keeping: justCompleted)
+        guard let revealedTask,
+            let task = tasks.task(revealedTask),
+            listed.contains(where: { $0.id == task.id }) == false
+        else { return listed }
+        return [task] + listed
     }
 
     private var todo: some View {
@@ -108,6 +126,8 @@ struct TodayPanel: View {
                     }
                     .coordinateSpace(.named(Self.cardSpace))
                     .onPreferenceChange(CardsTop.self) { contentTop = $0 }
+                    .onAppear { revealTask(with: scroller) }
+                    .onChange(of: revealedTask) { _, _ in revealTask(with: scroller) }
                 }
             }
             .scrollIndicators(.never)
@@ -188,6 +208,11 @@ struct TodayPanel: View {
     private func letGo() {
         draft = ""
         capturing = false
+    }
+
+    private func revealTask(with scroller: ScrollViewProxy) {
+        guard let revealedTask else { return }
+        scroller.scrollTo(revealedTask, anchor: .center)
     }
 }
 

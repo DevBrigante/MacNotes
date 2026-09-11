@@ -5,6 +5,7 @@ import Observation
 final class NotchPanelModel {
     private(set) var state: NotchPanelState = .hidden
     private(set) var isAllotting = false
+    private(set) var revealedTask: Task.ID?
 
     @ObservationIgnored var layoutChanged: (@MainActor () -> Void)?
     @ObservationIgnored var plannerAsked: (@MainActor () -> Void)?
@@ -49,6 +50,12 @@ final class NotchPanelModel {
         settle()
     }
 
+    func reveal(_ task: Task.ID) {
+        revealedTask = task
+        state = .expanded
+        layoutChanged?()
+    }
+
     private func settle() {
         if plannerIsOpen {
             isAllotting = false
@@ -59,6 +66,7 @@ final class NotchPanelModel {
             isAllotting = false
             state = sessionIsUnderway ? .collapsed : .hidden
         }
+        if state != .expanded { revealedTask = nil }
         layoutChanged?()
     }
 }
