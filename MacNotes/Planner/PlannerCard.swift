@@ -202,7 +202,8 @@ struct TaskDetailsFields: View {
                     }
                 }
                 .onChange(of: written) { tasks.note(written, on: task.id) }
-                .onKeyPress(.return) {
+                .onKeyPress(.return, phases: .down) { press in
+                    guard press.modifiers.contains(.shift) == false else { return .ignored }
                     tasks.note(written, on: task.id)
                     finish()
                     return .handled

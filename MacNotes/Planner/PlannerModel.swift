@@ -91,6 +91,7 @@ final class PlannerModel {
         } else {
             justCompleted.insert(task.id)
             tasks.complete(task, on: today)
+            sessions.endTheSession(on: task.id)
         }
     }
 

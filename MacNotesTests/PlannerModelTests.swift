@@ -226,6 +226,18 @@ final class PlannerModelTests {
         #expect(tasks.task(task.id)?.isCompleted == false)
     }
 
+    @Test func completingThePausedTasksFocusSessionEndsIt() {
+        let task = Task(title: "Book the flight", day: today)
+        tasks.add(task)
+        sessions.startOrPause(task)
+        sessions.pause()
+
+        planner.toggleCompletion(of: task)
+
+        #expect(tasks.task(task.id)?.isCompleted == true)
+        #expect(sessions.session == nil)
+    }
+
     @Test func deletingTheTaskASessionIsRunningOnEndsTheSession() {
         let going = Task(title: "Book the flight", day: today)
         tasks.add(going)

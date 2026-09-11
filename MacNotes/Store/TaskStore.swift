@@ -64,11 +64,12 @@ final class TaskStore {
     }
 
     @discardableResult
-    func capture(_ title: String, on day: Day?) -> Task? {
+    func capture(_ title: String, notes: String? = nil, on day: Day?) -> Task? {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard title.isEmpty == false else { return nil }
 
-        let task = Task(title: title, day: day)
+        let notes = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let task = Task(title: title, notes: notes?.isEmpty == false ? notes : nil, day: day)
         add(task)
         return task
     }
