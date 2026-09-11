@@ -123,7 +123,7 @@ final class NotchWindowController {
     }
 
     var intendedFrame: NSRect {
-        metrics.panelFrame(for: model.state)
+        metrics.panelFrame(for: model.state, allotted: sessions.session?.allotted)
     }
 
     func reveal(_ task: Task.ID) {

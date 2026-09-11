@@ -113,6 +113,16 @@ struct NotchMetricsTests {
         #expect(frame.height == stripHeight + NotchMetrics.Layout.collapsedDrop)
     }
 
+    @Test func collapsedGrowsForAReadoutWithTwoMinuteDigits() {
+        let metrics = builtInDisplay()
+        let compact = metrics.panelFrame(for: .collapsed, allotted: .init(minutes: 9))
+        let wide = metrics.panelFrame(for: .collapsed, allotted: .init(minutes: 10))
+
+        #expect(compact.width == notchWidth + 2 * NotchMetrics.Layout.collapsedFlank)
+        #expect(wide.width == notchWidth + 2 * NotchMetrics.Layout.wideCollapsedFlank)
+        #expect(wide.width > compact.width)
+    }
+
     @Test(arguments: Display.allCases)
     func expandedHangsBelowTheStrip(display: Display) {
         let metrics = display.metrics

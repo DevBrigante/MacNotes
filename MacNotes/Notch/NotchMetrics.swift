@@ -4,6 +4,7 @@ import CoreGraphics
 nonisolated struct NotchMetrics: Equatable {
     enum Layout {
         static let collapsedFlank: CGFloat = 72
+        static let wideCollapsedFlank: CGFloat = 76
         static let expandedFlank: CGFloat = 132
         static let collapsedDrop: CGFloat = 10
         static let expandedDrop: CGFloat = 140
@@ -56,8 +57,8 @@ nonisolated struct NotchMetrics: Equatable {
         hasPhysicalNotch == false
     }
 
-    func panelFrame(for state: NotchPanelState) -> CGRect {
-        let width = (notchRect.width + 2 * flankWidth(for: state)).rounded()
+    func panelFrame(for state: NotchPanelState, allotted: AllottedTime? = nil) -> CGRect {
+        let width = (notchRect.width + 2 * flankWidth(for: state, allotted: allotted)).rounded()
         let height = (notchRect.height + drop(for: state)).rounded()
         return CGRect(
             x: (notchRect.midX - width / 2).rounded(),
@@ -67,19 +68,22 @@ nonisolated struct NotchMetrics: Equatable {
         )
     }
 
-    func notchGap(for state: NotchPanelState) -> CGRect {
+    func notchGap(for state: NotchPanelState, allotted: AllottedTime? = nil) -> CGRect {
         CGRect(
-            x: notchRect.minX - panelFrame(for: state).minX,
+            x: notchRect.minX - panelFrame(for: state, allotted: allotted).minX,
             y: 0,
             width: notchRect.width,
             height: notchRect.height
         )
     }
 
-    func flankWidth(for state: NotchPanelState) -> CGFloat {
+    func flankWidth(for state: NotchPanelState, allotted: AllottedTime? = nil) -> CGFloat {
         switch state {
         case .hidden: 0
-        case .collapsed: Layout.collapsedFlank
+        case .collapsed:
+            allotted.map { $0.minutes >= 10 } == true
+                ? Layout.wideCollapsedFlank
+                : Layout.collapsedFlank
         case .expanded: Layout.expandedFlank
         }
     }

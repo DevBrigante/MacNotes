@@ -11,7 +11,8 @@ struct NotchPanelView: View {
     private let markerDiameter: CGFloat = 6
 
     var body: some View {
-        let panel = metrics.panelFrame(for: model.state).size
+        let allotted = sessions.session?.allotted
+        let panel = metrics.panelFrame(for: model.state, allotted: allotted).size
         return ZStack(alignment: .top) {
             surface
             content
@@ -53,7 +54,7 @@ struct NotchPanelView: View {
     }
 
     private var readout: some View {
-        let gap = metrics.notchGap(for: .collapsed)
+        let gap = metrics.notchGap(for: .collapsed, allotted: sessions.session?.allotted)
         return HStack(spacing: 0) {
             runningTask
                 .frame(width: gap.minX, alignment: .leading)
@@ -85,6 +86,7 @@ struct NotchPanelView: View {
                     .font(.system(size: 10, weight: .semibold))
                 Text(Countdown.text(sessions.remaining))
                     .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                    .lineLimit(1)
             }
             .foregroundStyle(sessions.isRunning ? Color.white : Color.white.opacity(0.5))
             .padding(.horizontal, 12)
