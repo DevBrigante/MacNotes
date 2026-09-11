@@ -212,7 +212,8 @@ final class NotchPanelViewTests {
         return try Pixels(
             NotchPanelView(
                 metrics: metrics, model: model, sessions: sessions ?? idle(),
-                tasks: tasks ?? store()),
+                tasks: tasks ?? store(),
+                settings: SettingsStore(file: JSONFile(name: "settings.json", in: folder.url))),
             width: (frame.width * fraction).rounded(),
             height: (frame.height * fraction).rounded())
     }

@@ -14,7 +14,8 @@ final class NotchWindowControllerTests {
     private func controller() -> NotchWindowController {
         NotchWindowController(
             tasks: TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60),
-            sessions: FocusSessionModel())
+            sessions: FocusSessionModel(),
+            settings: SettingsStore(file: JSONFile(name: "settings.json", in: folder.url)))
     }
 
     @Test func theWindowTakesTheFrameTheMetricsAskFor() {
