@@ -14,6 +14,7 @@ final class NotchPanelModel {
     @ObservationIgnored private var captureHasTheKeyboard = false
     @ObservationIgnored private var taskIsBeingDragged = false
     @ObservationIgnored private var sessionIsUnderway = false
+    @ObservationIgnored private var showsSessionReadout = false
     @ObservationIgnored private var plannerIsOpen = false
 
     func cursorMoved(isOver: Bool) {
@@ -46,8 +47,15 @@ final class NotchPanelModel {
         settle()
     }
 
-    func sessionChanged(isUnderway: Bool) {
+    func sessionChanged(isUnderway: Bool, showsReadout: Bool = true) {
         sessionIsUnderway = isUnderway
+        showsSessionReadout = isUnderway && showsReadout
+        settle()
+    }
+
+    func sessionReadoutChanged(isShown: Bool) {
+        showsSessionReadout = sessionIsUnderway && isShown
+        if isShown == false { cursorIsOver = false }
         settle()
     }
 
@@ -65,7 +73,7 @@ final class NotchPanelModel {
             state = .expanded
         } else {
             isAllotting = false
-            state = sessionIsUnderway ? .collapsed : .hidden
+            state = showsSessionReadout ? .collapsed : .hidden
         }
         if state != .expanded { revealedTask = nil }
         layoutChanged?()

@@ -52,12 +52,18 @@ final class SettingsModelTests {
     @Test func focusPreferencesAreSavedAsTheyChange() {
         model.setSessionEndNotifications(false)
         model.setProgressTrayShown(false)
+        model.setTaskTitleShown(false)
+        model.setTimerShown(false)
 
         let file = JSONFile<AppSettings>(name: "settings.json", in: folder.url)
 
         #expect(
             file.read(on: Day(year: 2026, month: 9, day: 10))
-                == .value(AppSettings(sessionEndNotifications: false, showsProgressTray: false)))
+                == .value(AppSettings(
+                    sessionEndNotifications: false,
+                    showsProgressTray: false,
+                    showsTaskTitle: false,
+                    showsTimer: false)))
     }
 }
 

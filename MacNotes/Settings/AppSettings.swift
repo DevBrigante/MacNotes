@@ -5,15 +5,26 @@ import ServiceManagement
 nonisolated struct AppSettings: Codable, Equatable, Sendable {
     var sessionEndNotifications: Bool
     var showsProgressTray: Bool
+    var showsTaskTitle: Bool
+    var showsTimer: Bool
 
-    init(sessionEndNotifications: Bool = true, showsProgressTray: Bool = true) {
+    init(
+        sessionEndNotifications: Bool = true,
+        showsProgressTray: Bool = true,
+        showsTaskTitle: Bool = true,
+        showsTimer: Bool = true
+    ) {
         self.sessionEndNotifications = sessionEndNotifications
         self.showsProgressTray = showsProgressTray
+        self.showsTaskTitle = showsTaskTitle
+        self.showsTimer = showsTimer
     }
 
     private enum CodingKeys: String, CodingKey {
         case sessionEndNotifications
         case showsProgressTray
+        case showsTaskTitle
+        case showsTimer
     }
 
     init(from decoder: any Decoder) throws {
@@ -21,6 +32,8 @@ nonisolated struct AppSettings: Codable, Equatable, Sendable {
         sessionEndNotifications = try values.decodeIfPresent(Bool.self, forKey: .sessionEndNotifications)
             ?? true
         showsProgressTray = try values.decodeIfPresent(Bool.self, forKey: .showsProgressTray) ?? true
+        showsTaskTitle = try values.decodeIfPresent(Bool.self, forKey: .showsTaskTitle) ?? true
+        showsTimer = try values.decodeIfPresent(Bool.self, forKey: .showsTimer) ?? true
     }
 }
 
@@ -32,6 +45,7 @@ final class SettingsStore {
     private(set) var couldNotSave = false
 
     @ObservationIgnored private let file: JSONFile<AppSettings>
+    @ObservationIgnored var displayPreferencesChanged: (@MainActor () -> Void)?
 
     init(file: JSONFile<AppSettings>) {
         self.file = file
@@ -65,6 +79,20 @@ final class SettingsStore {
         guard preferences.showsProgressTray != shown else { return }
         preferences.showsProgressTray = shown
         save()
+    }
+
+    func setTaskTitleShown(_ shown: Bool) {
+        guard preferences.showsTaskTitle != shown else { return }
+        preferences.showsTaskTitle = shown
+        save()
+        displayPreferencesChanged?()
+    }
+
+    func setTimerShown(_ shown: Bool) {
+        guard preferences.showsTimer != shown else { return }
+        preferences.showsTimer = shown
+        save()
+        displayPreferencesChanged?()
     }
 
     func save() {
@@ -161,6 +189,14 @@ final class SettingsModel {
         store.preferences.showsProgressTray
     }
 
+    var showsTaskTitle: Bool {
+        store.preferences.showsTaskTitle
+    }
+
+    var showsTimer: Bool {
+        store.preferences.showsTimer
+    }
+
     func refresh() {
         loginItemRevision += 1
         calendar.refreshAccess()
@@ -190,6 +226,14 @@ final class SettingsModel {
 
     func setProgressTrayShown(_ shown: Bool) {
         store.setProgressTrayShown(shown)
+    }
+
+    func setTaskTitleShown(_ shown: Bool) {
+        store.setTaskTitleShown(shown)
+    }
+
+    func setTimerShown(_ shown: Bool) {
+        store.setTimerShown(shown)
     }
 
     func connectCalendar() async {

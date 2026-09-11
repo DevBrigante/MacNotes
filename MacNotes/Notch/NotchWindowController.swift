@@ -18,11 +18,19 @@ final class NotchWindowController {
     private var metrics: NotchMetrics
     private var observers: [NSObjectProtocol] = []
     private var sampler: Timer?
+    private var pausedSessionReadoutTimer: Timer?
+    private let pausedSessionReadoutDelay: TimeInterval
 
-    init(tasks: TaskStore, sessions: FocusSessionModel, settings: SettingsStore) {
+    init(
+        tasks: TaskStore,
+        sessions: FocusSessionModel,
+        settings: SettingsStore,
+        pausedSessionReadoutDelay: TimeInterval = 3 * 60
+    ) {
         self.tasks = tasks
         self.sessions = sessions
         self.settings = settings
+        self.pausedSessionReadoutDelay = pausedSessionReadoutDelay
         metrics = Self.metrics(of: activeDisplay.screen)
         hosting = NSHostingView(
             rootView: NotchPanelView(
@@ -44,6 +52,7 @@ final class NotchWindowController {
             guard let self else { return }
             self.plannerAsked?(self.activeDisplay.screen)
         }
+        settings.displayPreferencesChanged = { [weak self] in self?.placeIfNeeded() }
         watchTheCursor()
         watchTheSession()
         followTheCursorAcrossDisplays()
@@ -53,6 +62,7 @@ final class NotchWindowController {
 
     deinit {
         sampler?.invalidate()
+        pausedSessionReadoutTimer?.invalidate()
     }
 
     private static func metrics(of screen: NSScreen?) -> NotchMetrics {
@@ -95,9 +105,24 @@ final class NotchWindowController {
     }
 
     private func watchTheSession() {
-        sessions.sessionIsUnderway = { [weak self] isUnderway in
-            self?.model.sessionChanged(isUnderway: isUnderway)
+        sessions.sessionChanged = { [weak self] session in
+            self?.sessionChanged(session)
         }
+    }
+
+    private func sessionChanged(_ session: FocusSession?) {
+        pausedSessionReadoutTimer?.invalidate()
+        pausedSessionReadoutTimer = nil
+        model.sessionChanged(isUnderway: session != nil)
+
+        guard let session, session.isPaused else { return }
+
+        let timer = Timer(timeInterval: pausedSessionReadoutDelay, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated { self?.model.sessionReadoutChanged(isShown: false) }
+        }
+        timer.tolerance = pausedSessionReadoutDelay / 4
+        RunLoop.main.add(timer, forMode: .common)
+        pausedSessionReadoutTimer = timer
     }
 
     private func placeIfNeeded() {
@@ -123,7 +148,15 @@ final class NotchWindowController {
     }
 
     var intendedFrame: NSRect {
-        metrics.panelFrame(for: model.state, allotted: sessions.session?.allotted)
+        metrics.panelFrame(
+            for: model.state, allotted: sessions.session?.allotted, readout: readout)
+    }
+
+    private var readout: NotchReadout {
+        NotchReadout(
+            showsTaskTitle: settings.preferences.showsTaskTitle,
+            showsTimer: settings.preferences.showsTimer
+        )
     }
 
     func reveal(_ task: Task.ID) {

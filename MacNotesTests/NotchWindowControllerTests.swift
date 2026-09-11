@@ -60,6 +60,49 @@ final class NotchWindowControllerTests {
         #expect(controller.intendedFrame == hidden)
     }
 
+    @Test func aPausedSessionHidesItsReadoutAfterTheConfiguredDelay() {
+        let sessions = FocusSessionModel()
+        let controller = NotchWindowController(
+            tasks: TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60),
+            sessions: sessions,
+            settings: SettingsStore(file: JSONFile(name: "settings.json", in: folder.url)),
+            pausedSessionReadoutDelay: 0.01)
+
+        sessions.start(.init(minutes: 25), on: UUID())
+        sessions.pause()
+        let remainingAtPause = sessions.remaining
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.1))
+
+        #expect(controller.model.state == .hidden)
+
+        controller.model.cursorMoved(isOver: true)
+
+        #expect(controller.model.state == .expanded)
+        #expect(sessions.session?.isPaused == true)
+        #expect(sessions.remaining == remainingAtPause)
+    }
+
+    @Test func hidingReadoutsResizesTheCollapsedPanelImmediately() {
+        let sessions = FocusSessionModel()
+        let settings = SettingsStore(file: JSONFile(name: "settings.json", in: folder.url))
+        let controller = NotchWindowController(
+            tasks: TaskStore(file: JSONFile(name: "tasks.json", in: folder.url), saveDelay: 60),
+            sessions: sessions,
+            settings: settings)
+
+        sessions.start(.init(minutes: 25), on: UUID())
+        let full = controller.intendedFrame
+
+        settings.setTaskTitleShown(false)
+        let timerOnly = controller.intendedFrame
+
+        settings.setTimerShown(false)
+        let empty = controller.intendedFrame
+
+        #expect(timerOnly.width < full.width)
+        #expect(empty.width < timerOnly.width)
+    }
+
     @Test func theWindowFollowsThePanelOntoTheCollapsedFrame() {
         let controller = controller()
 
