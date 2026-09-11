@@ -20,6 +20,12 @@ Se o macOS disser que o app está *danificado*, o app não está danificado: ele
 xattr -dr com.apple.quarantine /Applications/MacNotes.app
 ```
 
+### Encerrar o app
+
+Para parar o MacNotes completamente, abra o Planner pelo botão `⤢` no Notch Panel, abra **Ajustes** pelo botão de engrenagem e, na seção **MacNotes**, clique em **Quit MacNotes** e confirme. O app salva os seus dados e deixa de executar o Notch Panel, o atalho global e qualquer Focus Session.
+
+Com o Planner aberto, você também pode escolher **MacNotes → Quit MacNotes** na barra de menus ou pressionar `⌘Q`.
+
 ### Seus dados
 
 Nada sai da sua máquina: não há conta, servidor nem telemetria. As Tasks e preferências são arquivos JSON simples, que você pode abrir e ler em:
@@ -53,6 +59,12 @@ If macOS says the app is *damaged*, it is not damaged: it has a quarantine attri
 ```sh
 xattr -dr com.apple.quarantine /Applications/MacNotes.app
 ```
+
+### Quitting the app
+
+To stop MacNotes completely, open the Planner with the `⤢` button in the Notch Panel, open **Settings** with the gear button, then click **Quit MacNotes** in the **MacNotes** section and confirm. The app saves your data and stops the Notch Panel, global hotkey, and any Focus Session.
+
+With the Planner open, you can also choose **MacNotes → Quit MacNotes** from the menu bar or press `⌘Q`.
 
 ### Your data
 

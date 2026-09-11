@@ -1,7 +1,9 @@
+import AppKit
 import SwiftUI
 
 struct SettingsView: View {
     @Bindable var settings: SettingsModel
+    @State private var showingQuitConfirmation = false
 
     var body: some View {
         Form {
@@ -29,6 +31,11 @@ struct SettingsView: View {
                         get: { settings.showsProgressTray },
                         set: { settings.setProgressTrayShown($0) }))
             }
+            Section("MacNotes") {
+                Button("Quit MacNotes", role: .destructive) {
+                    showingQuitConfirmation = true
+                }
+            }
         }
         .formStyle(.grouped)
         .frame(width: 420)
@@ -44,6 +51,17 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(settings.loginItemError ?? "")
+        }
+        .confirmationDialog(
+            "Quit MacNotes?",
+            isPresented: $showingQuitConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Quit MacNotes", role: .destructive) {
+                NSApp.terminate(nil)
+            }
+        } message: {
+            Text("MacNotes will save your data and stop running.")
         }
     }
 
