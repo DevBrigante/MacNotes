@@ -1,6 +1,17 @@
 import AppKit
 import CoreGraphics
 
+nonisolated struct NotchReadout: Equatable, Sendable {
+    let showsTaskTitle: Bool
+    let showsTimer: Bool
+
+    static let all = NotchReadout(showsTaskTitle: true, showsTimer: true)
+
+    var isEmpty: Bool {
+        showsTaskTitle == false && showsTimer == false
+    }
+}
+
 nonisolated struct NotchMetrics: Equatable {
     enum Layout {
         static let collapsedFlank: CGFloat = 72
@@ -57,41 +68,60 @@ nonisolated struct NotchMetrics: Equatable {
         hasPhysicalNotch == false
     }
 
-    func panelFrame(for state: NotchPanelState, allotted: AllottedTime? = nil) -> CGRect {
-        let width = (notchRect.width + 2 * flankWidth(for: state, allotted: allotted)).rounded()
-        let height = (notchRect.height + drop(for: state)).rounded()
+    func panelFrame(
+        for state: NotchPanelState,
+        allotted: AllottedTime? = nil,
+        readout: NotchReadout = .all
+    ) -> CGRect {
+        let flanks = flankWidths(for: state, allotted: allotted, readout: readout)
+        let width = (notchRect.width + flanks.leading + flanks.trailing).rounded()
+        let height = (notchRect.height + drop(for: state, readout: readout)).rounded()
         return CGRect(
-            x: (notchRect.midX - width / 2).rounded(),
+            x: (notchRect.minX - flanks.leading).rounded(),
             y: screenFrame.maxY - height,
             width: width,
             height: height
         )
     }
 
-    func notchGap(for state: NotchPanelState, allotted: AllottedTime? = nil) -> CGRect {
+    func notchGap(
+        for state: NotchPanelState,
+        allotted: AllottedTime? = nil,
+        readout: NotchReadout = .all
+    ) -> CGRect {
         CGRect(
-            x: notchRect.minX - panelFrame(for: state, allotted: allotted).minX,
+            x: notchRect.minX - panelFrame(for: state, allotted: allotted, readout: readout).minX,
             y: 0,
             width: notchRect.width,
             height: notchRect.height
         )
     }
 
-    func flankWidth(for state: NotchPanelState, allotted: AllottedTime? = nil) -> CGFloat {
+    private func flankWidths(
+        for state: NotchPanelState,
+        allotted: AllottedTime?,
+        readout: NotchReadout
+    ) -> (leading: CGFloat, trailing: CGFloat) {
         switch state {
-        case .hidden: 0
+        case .hidden:
+            return (0, 0)
         case .collapsed:
-            allotted.map { $0.minutes >= 10 } == true
+            let width = allotted.map { $0.minutes >= 10 } == true
                 ? Layout.wideCollapsedFlank
                 : Layout.collapsedFlank
-        case .expanded: Layout.expandedFlank
+            return (
+                readout.showsTaskTitle ? width : 0,
+                readout.showsTimer ? width : 0
+            )
+        case .expanded:
+            return (Layout.expandedFlank, Layout.expandedFlank)
         }
     }
 
-    private func drop(for state: NotchPanelState) -> CGFloat {
+    private func drop(for state: NotchPanelState, readout: NotchReadout = .all) -> CGFloat {
         switch state {
         case .hidden: 0
-        case .collapsed: Layout.collapsedDrop
+        case .collapsed: readout.isEmpty ? 0 : Layout.collapsedDrop
         case .expanded: Layout.expandedDrop
         }
     }

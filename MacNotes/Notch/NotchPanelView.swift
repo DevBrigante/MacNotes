@@ -12,7 +12,8 @@ struct NotchPanelView: View {
 
     var body: some View {
         let allotted = sessions.session?.allotted
-        let panel = metrics.panelFrame(for: model.state, allotted: allotted).size
+        let panel = metrics.panelFrame(
+            for: model.state, allotted: allotted, readout: readoutOptions).size
         return ZStack(alignment: .top) {
             surface
             content
@@ -54,21 +55,24 @@ struct NotchPanelView: View {
     }
 
     private var readout: some View {
-        let gap = metrics.notchGap(for: .collapsed, allotted: sessions.session?.allotted)
+        let panel = metrics.panelFrame(
+            for: .collapsed, allotted: sessions.session?.allotted, readout: readoutOptions)
+        let gap = metrics.notchGap(
+            for: .collapsed, allotted: sessions.session?.allotted, readout: readoutOptions)
         return HStack(spacing: 0) {
             runningTask
                 .frame(width: gap.minX, alignment: .leading)
             Spacer(minLength: 0)
                 .frame(width: gap.width)
             runningTime
-                .frame(width: gap.minX, alignment: .trailing)
+                .frame(width: panel.width - gap.maxX, alignment: .trailing)
         }
         .frame(height: gap.height)
     }
 
     @ViewBuilder
     private var runningTask: some View {
-        if let title = runningTitle {
+        if settings.preferences.showsTaskTitle, let title = runningTitle {
             Text(title)
                 .font(.system(size: 11, weight: .medium))
                 .lineLimit(1)
@@ -80,7 +84,7 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var runningTime: some View {
-        if sessions.session != nil {
+        if settings.preferences.showsTimer, sessions.session != nil {
             HStack(spacing: 4) {
                 Image(systemName: "timer")
                     .font(.system(size: 10, weight: .semibold))
@@ -95,6 +99,13 @@ struct NotchPanelView: View {
 
     private var runningTitle: String? {
         sessions.session.flatMap { tasks.task($0.task)?.title }
+    }
+
+    private var readoutOptions: NotchReadout {
+        NotchReadout(
+            showsTaskTitle: settings.preferences.showsTaskTitle,
+            showsTimer: settings.preferences.showsTimer
+        )
     }
 
     private var today: some View {

@@ -30,6 +30,16 @@ struct SettingsView: View {
                     isOn: Binding(
                         get: { settings.showsProgressTray },
                         set: { settings.setProgressTrayShown($0) }))
+                Toggle(
+                    "Task name",
+                    isOn: Binding(
+                        get: { settings.showsTaskTitle },
+                        set: { settings.setTaskTitleShown($0) }))
+                Toggle(
+                    "Timer",
+                    isOn: Binding(
+                        get: { settings.showsTimer },
+                        set: { settings.setTimerShown($0) }))
             }
             Section("MacNotes") {
                 Button("Quit MacNotes", role: .destructive) {

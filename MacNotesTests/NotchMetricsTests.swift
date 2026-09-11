@@ -123,6 +123,25 @@ struct NotchMetricsTests {
         #expect(wide.width > compact.width)
     }
 
+    @Test func theCollapsedPanelUsesOnlyTheFlanksWhoseReadoutsAreShown() {
+        let metrics = builtInDisplay()
+        let titleOnly = metrics.panelFrame(
+            for: .collapsed,
+            readout: NotchReadout(showsTaskTitle: true, showsTimer: false))
+        let timerOnly = metrics.panelFrame(
+            for: .collapsed,
+            readout: NotchReadout(showsTaskTitle: false, showsTimer: true))
+        let empty = metrics.panelFrame(
+            for: .collapsed,
+            readout: NotchReadout(showsTaskTitle: false, showsTimer: false))
+
+        #expect(titleOnly.width == metrics.notchRect.width + NotchMetrics.Layout.collapsedFlank)
+        #expect(timerOnly.width == titleOnly.width)
+        #expect(titleOnly.minX == metrics.notchRect.minX - NotchMetrics.Layout.collapsedFlank)
+        #expect(timerOnly.minX == metrics.notchRect.minX)
+        #expect(empty == metrics.notchRect)
+    }
+
     @Test(arguments: Display.allCases)
     func expandedHangsBelowTheStrip(display: Display) {
         let metrics = display.metrics

@@ -9,6 +9,7 @@ final class FocusSessionModel {
     private(set) var remaining: TimeInterval = 0
 
     @ObservationIgnored var sessionIsUnderway: (@MainActor (Bool) -> Void)?
+    @ObservationIgnored var sessionChanged: (@MainActor (FocusSession?) -> Void)?
     @ObservationIgnored var sessionEnded: (@MainActor (Task.ID) -> Void)?
     @ObservationIgnored private(set) var clock: Timer?
     @ObservationIgnored private let now: @MainActor () -> TimeInterval
@@ -47,6 +48,7 @@ final class FocusSessionModel {
         remaining = allotted.seconds
         keepTime()
         sessionIsUnderway?(true)
+        sessionChanged?(session)
     }
 
     func startOrPause(_ task: Task) {
@@ -79,6 +81,7 @@ final class FocusSessionModel {
         self.session = session
         putTheClockDown()
         countDown()
+        sessionChanged?(self.session)
     }
 
     func resume() {
@@ -87,6 +90,7 @@ final class FocusSessionModel {
         self.session = session
         keepTime()
         countDown()
+        sessionChanged?(self.session)
     }
 
     func end() {
@@ -96,6 +100,7 @@ final class FocusSessionModel {
         putTheClockDown()
         sessionEnded?(session.task)
         sessionIsUnderway?(false)
+        sessionChanged?(nil)
     }
 
     private func countDown() {

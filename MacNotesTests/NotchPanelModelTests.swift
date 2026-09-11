@@ -66,6 +66,45 @@ struct NotchPanelModelTests {
         #expect(model.state == .collapsed)
     }
 
+    @Test func aPausedSessionsReadoutCanCloseWhileTheCursorIsAway() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+
+        model.sessionReadoutChanged(isShown: false)
+
+        #expect(model.state == .hidden)
+    }
+
+    @Test func aPausedSessionsReadoutClosesEvenIfTheCursorHasNotMoved() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+        model.cursorMoved(isOver: true)
+
+        model.sessionReadoutChanged(isShown: false)
+
+        #expect(model.state == .hidden)
+    }
+
+    @Test func aPausedSessionsReadoutStillOpensUnderTheCursor() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+        model.sessionReadoutChanged(isShown: false)
+
+        model.cursorMoved(isOver: true)
+
+        #expect(model.state == .expanded)
+    }
+
+    @Test func resumingRestoresTheCollapsedReadout() {
+        let model = NotchPanelModel()
+        model.sessionChanged(isUnderway: true)
+        model.sessionReadoutChanged(isShown: false)
+
+        model.sessionChanged(isUnderway: true)
+
+        #expect(model.state == .collapsed)
+    }
+
     @Test func theSessionEndingHidesThePanelTheCursorIsAwayFrom() {
         let model = NotchPanelModel()
         model.sessionChanged(isUnderway: true)
