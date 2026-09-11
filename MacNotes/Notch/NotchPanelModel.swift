@@ -42,6 +42,7 @@ final class NotchPanelModel {
 
     func plannerChanged(isOpen: Bool) {
         plannerIsOpen = isOpen
+        if isOpen == false { cursorIsOver = false }
         settle()
     }
 

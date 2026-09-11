@@ -206,6 +206,16 @@ struct NotchPanelModelTests {
         #expect(model.state == .hidden)
     }
 
+    @Test func thePlannerClosingForgetsTheCursorItCouldNotTrack() {
+        let model = NotchPanelModel()
+        model.cursorMoved(isOver: true)
+
+        model.plannerChanged(isOpen: true)
+        model.plannerChanged(isOpen: false)
+
+        #expect(model.state == .hidden)
+    }
+
     @Test func askingForThePlannerReachesWhoeverOpensIt() {
         let model = NotchPanelModel()
         var asked = 0
