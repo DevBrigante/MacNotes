@@ -91,6 +91,7 @@ struct NotchPanelView: View {
                 Text(Countdown.text(sessions.remaining))
                     .font(.system(size: 12, weight: .semibold).monospacedDigit())
                     .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .foregroundStyle(sessions.isRunning ? Color.white : Color.white.opacity(0.5))
             .padding(.horizontal, 12)

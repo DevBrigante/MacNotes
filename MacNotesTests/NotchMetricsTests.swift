@@ -123,6 +123,13 @@ struct NotchMetricsTests {
         #expect(wide.width > compact.width)
     }
 
+    @Test func externalDisplayLeavesRoomForTheEntireTwoDigitCountdown() {
+        let metrics = externalDisplay()
+        let frame = metrics.panelFrame(for: .collapsed, allotted: .init(minutes: 60))
+
+        #expect(frame.width == metrics.notchRect.width + 2 * 88)
+    }
+
     @Test func theCollapsedPanelUsesOnlyTheFlanksWhoseReadoutsAreShown() {
         let metrics = builtInDisplay()
         let titleOnly = metrics.panelFrame(

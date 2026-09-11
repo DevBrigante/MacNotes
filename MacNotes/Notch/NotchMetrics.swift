@@ -15,7 +15,7 @@ nonisolated struct NotchReadout: Equatable, Sendable {
 nonisolated struct NotchMetrics: Equatable {
     enum Layout {
         static let collapsedFlank: CGFloat = 72
-        static let wideCollapsedFlank: CGFloat = 76
+        static let wideCollapsedFlank: CGFloat = 88
         static let expandedFlank: CGFloat = 132
         static let collapsedDrop: CGFloat = 10
         static let expandedDrop: CGFloat = 140
