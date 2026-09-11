@@ -62,6 +62,11 @@ struct PlannerView: View {
             .labelsHidden()
             .frame(width: 200)
             Spacer(minLength: 0)
+            SettingsLink {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Settings")
             Text(subtitle)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)

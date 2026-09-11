@@ -7,7 +7,7 @@ struct MacNotesApp: App {
 
     var body: some Scene {
         Settings {
-            EmptyView()
+            SettingsView(settings: delegate.settings)
         }
     }
 }
@@ -15,6 +15,9 @@ struct MacNotesApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let tasks = TaskStore(file: JSONFile(name: "tasks.json"))
     private let sessions = FocusSessionModel()
+    private let settingsStore = SettingsStore()
+    private let calendar = CalendarEvents()
+    lazy var settings = SettingsModel(store: settingsStore, calendar: calendar)
     private var notch: NotchWindowController?
     private var planner: PlannerWindowController?
     private var hotkey: GlobalHotkey?
@@ -22,14 +25,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         tasks.load(on: .today())
-        notch = NotchWindowController(tasks: tasks, sessions: sessions)
-        planner = PlannerWindowController(tasks: tasks, sessions: sessions)
+        settingsStore.load(on: .today())
+        notch = NotchWindowController(tasks: tasks, sessions: sessions, settings: settingsStore)
+        planner = PlannerWindowController(tasks: tasks, sessions: sessions, calendar: calendar)
         hotkey = GlobalHotkey { [weak self] in
             guard let self else { return }
             self.sessions.respondToTheGlobalHotkey(with: self.tasks.tasks, on: .today())
         }
         showTheOneSurfaceAtATime()
         tasks.corruption.map(announce)
+        settingsStore.corruption.map(announce)
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
@@ -56,6 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         tasks.save()
+        settingsStore.save()
     }
 
     private func showTheOneSurfaceAtATime() {

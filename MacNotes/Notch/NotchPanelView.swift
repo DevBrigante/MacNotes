@@ -5,6 +5,7 @@ struct NotchPanelView: View {
     let model: NotchPanelModel
     let sessions: FocusSessionModel
     let tasks: TaskStore
+    let settings: SettingsStore
 
     private let cornerRadius: CGFloat = 10
     private let markerDiameter: CGFloat = 6
@@ -104,7 +105,7 @@ struct NotchPanelView: View {
 
     @ViewBuilder
     private var tray: some View {
-        if model.state != .hidden, sessions.session != nil {
+        if model.state != .hidden, sessions.session != nil, settings.preferences.showsProgressTray {
             ProgressTray(grown: sessions.progress, panelCornerRadius: cornerRadius)
         }
     }

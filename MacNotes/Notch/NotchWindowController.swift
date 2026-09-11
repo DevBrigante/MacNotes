@@ -10,6 +10,7 @@ final class NotchWindowController {
     var plannerAsked: (@MainActor (NSScreen?) -> Void)?
 
     private let tasks: TaskStore
+    private let settings: SettingsStore
     private let tracking = NotchTrackingView()
     private let hosting: NSHostingView<NotchPanelView>
 
@@ -18,13 +19,14 @@ final class NotchWindowController {
     private var observers: [NSObjectProtocol] = []
     private var sampler: Timer?
 
-    init(tasks: TaskStore, sessions: FocusSessionModel) {
+    init(tasks: TaskStore, sessions: FocusSessionModel, settings: SettingsStore) {
         self.tasks = tasks
         self.sessions = sessions
+        self.settings = settings
         metrics = Self.metrics(of: activeDisplay.screen)
         hosting = NSHostingView(
             rootView: NotchPanelView(
-                metrics: metrics, model: model, sessions: sessions, tasks: tasks))
+                metrics: metrics, model: model, sessions: sessions, tasks: tasks, settings: settings))
 
         hosting.sizingOptions = []
         hosting.translatesAutoresizingMaskIntoConstraints = false
@@ -82,7 +84,7 @@ final class NotchWindowController {
         }
         metrics = Self.metrics(of: activeDisplay.screen)
         hosting.rootView = NotchPanelView(
-            metrics: metrics, model: model, sessions: sessions, tasks: tasks)
+            metrics: metrics, model: model, sessions: sessions, tasks: tasks, settings: settings)
         place(animated: false)
     }
 

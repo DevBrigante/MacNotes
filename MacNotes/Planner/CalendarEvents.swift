@@ -65,6 +65,11 @@ final class CalendarEvents {
         source.openSettings()
     }
 
+    func refreshAccess() {
+        access = source.access
+        refresh()
+    }
+
     private func refresh() {
         guard access == .connected, let day else {
             events = []
